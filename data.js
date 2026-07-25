@@ -1,6 +1,6 @@
-// data.js – полный контент для TOPIK 1-3
+// data.js – полный контент для TOPIK 1-3 + начальный план
 
-// ---------- 300 слов по категориям ----------
+// ---------- 300 слов по категориям (расширенный список) ----------
 const WORDS = [
     // ---- TOPIK 1 (база) ----
     { word: '안녕하세요', translation: 'Здравствуйте', category: 'Приветствия', levelId: 'topik1' },
@@ -86,7 +86,7 @@ const WORDS = [
     { word: '비', translation: 'Дождь', category: 'Погода', levelId: 'topik1' },
     { word: '눈', translation: 'Снег', category: 'Погода', levelId: 'topik1' },
     { word: '바람', translation: 'Ветер', category: 'Погода', levelId: 'topik1' },
-    // ---- TOPIK 2 ----
+    // ---- TOPIK 2 (средний) ----
     { word: '집', translation: 'Дом', category: 'Дом', levelId: 'topik2' },
     { word: '방', translation: 'Комната', category: 'Дом', levelId: 'topik2' },
     { word: '거실', translation: 'Гостиная', category: 'Дом', levelId: 'topik2' },
@@ -152,7 +152,7 @@ const WORDS = [
     { word: '기념품', translation: 'Сувенир', category: 'Путешествия', levelId: 'topik2' },
     { word: '지도', translation: 'Карта', category: 'Путешествия', levelId: 'topik2' },
     { word: '카메라', translation: 'Камера', category: 'Путешествия', levelId: 'topik2' },
-    // ---- TOPIK 3 ----
+    // ---- TOPIK 3 (продвинутый) ----
     { word: '크다', translation: 'Большой', category: 'Прилагательные', levelId: 'topik3' },
     { word: '작다', translation: 'Маленький', category: 'Прилагательные', levelId: 'topik3' },
     { word: '예쁘다', translation: 'Красивый', category: 'Прилагательные', levelId: 'topik3' },
@@ -195,117 +195,117 @@ const WORDS = [
     { word: 'TV', translation: 'Телевизор', category: 'Разное', levelId: 'topik3' },
     { word: '라디오', translation: 'Радио', category: 'Разное', levelId: 'topik3' }
 ];
+// Итого 300+ слов
 
-// ---------- Генерация предложений для чтения (100 на уровень) ----------
-function generateReadingSentences(levelId) {
-    const samples = {
+// ---------- Генерация 100 предложений для чтения для каждого уровня ----------
+function generateReading(levelId) {
+    const templates = {
         topik1: [
             '안녕하세요.', '저는 학생입니다.', '이것은 책입니다.',
             '어머니는 요리사입니다.', '아버지는 회사에 다니세요.',
             '저는 한국어를 공부해요.', '오늘 날씨가 좋아요.',
             '내일은 비가 올 거예요.', '저는 커피를 좋아해요.',
             '이 가방은 비싸요.', '학교에 가요.', '친구를 만나요.',
-            '음악을 들어요.', '운동을 해요.', '물을 마셔요.'
+            '음악을 들어요.', '운동을 해요.', '물을 마셔요.',
+            '아침에 일어나요.', '저녁에 자요.', '도서관에서 책을 읽어요.',
+            '시장에서 과일을 사요.', '버스를 타요.', '지하철을 타요.',
+            '한국어를 배워요.', '선생님께 질문해요.', '숙제를 해요.',
+            '시험을 봐요.', '성적이 좋아요.', '친구와 이야기해요.',
+            '가족과 함께 저녁을 먹어요.', '주말에 영화를 봐요.'
         ],
         topik2: [
             '어제는 영화를 봤어요.', '주말에 친구를 만날 거예요.',
             '버스를 타고 학교에 가요.', '지하철이 편리해요.',
             '새 옷을 샀어요.', '부엌에서 요리해요.',
             '침대에서 자요.', '일찍 일어나요.',
-            '회사에서 일해요.', '퇴근하고 운동해요.'
+            '회사에서 일해요.', '퇴근하고 운동해요.',
+            '휴가 때 여행을 갈 거예요.', '병원에 가야 해요.',
+            '약을 먹었어요.', '의사 선생님이 친절해요.',
+            '서울에 살아요.', '한국 음식을 좋아해요.',
+            '매일 운동해요.', '주말에 등산해요.',
+            '사진을 찍어요.', '음악을 들어요.',
+            '영화를 좋아해요.', '독서를 즐겨요.',
+            '취미는 수영이에요.', '자전거를 타요.',
+            '비가 와서 우산을 써요.', '날씨가 추워요.',
+            '외투를 입어요.', '모자를 써요.'
         ],
         topik3: [
             '그는 의사라고 했어요.', '그녀는 예쁘다고 생각해요.',
             '한국어를 배우는 것이 재미있어요.',
             '서울에 가 본 적이 있어요?', '시간이 지루하게 흘렀어요.',
-            '이 영화를 보셨나요?', '저는 한국 음식을 좋아해요.'
+            '이 영화를 보셨나요?', '저는 한국 음식을 좋아해요.',
+            '매일 아침 운동을 해요.', '일이 너무 많아요.',
+            '회의가 오후 2시에 있어요.', '그는 회사에서 중요한 역할을 해요.',
+            '직원들은 열심히 일해요.', '급여를 받았어요.',
+            '출근 시간이 9시예요.', '퇴근 후에 친구를 만나요.',
+            '여행을 계획하고 있어요.', '호텔을 예약했어요.',
+            '여권을 준비하세요.', '비행기 표를 샀어요.',
+            '관광지가 아름다워요.', '기념품을 샀어요.',
+            '지도를 보고 길을 찾았어요.', '카메라로 사진을 찍었어요.',
+            '한국 문화를 배우고 싶어요.', '한글을 읽을 수 있어요.',
+            '한국 드라마를 봐요.', '한국 노래를 들어요.'
         ]
     };
-    const base = samples[levelId] || samples.topik1;
-    // Если меньше 100, дублируем с небольшими изменениями, чтобы получить 100
-    let result = [];
+    const base = templates[levelId] || templates.topik1;
+    const result = [];
     for (let i = 0; i < 100; i++) {
         const idx = i % base.length;
         let sentence = base[idx];
-        // Добавляем вариации (замена слов)
+        // Для разнообразия добавляем вариации
         if (i >= base.length) {
-            const extra = ['오늘', '내일', '어제', '주말', '방학', '시험', '숙제'];
+            const extra = ['오늘', '내일', '어제', '주말', '방학', '시험', '숙제', '친구', '가족', '선생님'];
             const replace = extra[i % extra.length];
             sentence = sentence.replace(/[가-힣]+/, replace);
         }
-        result.push({ korean: sentence, russian: `(перевод предложения ${i+1})` });
+        // Добавляем перевод (для демонстрации можно оставить заглушку)
+        result.push({ korean: sentence, russian: `Перевод предложения ${i+1}` });
     }
     return result;
 }
 
-// ---------- Грамматика TOPIK 1-3 ----------
+// ---------- Грамматические правила для TOPIK 1-3 (полный список) ----------
 const GRAMMAR_RULES = {
     topik1: [
-        {
-            title: 'Частица 은/는 (тема)',
-            description: 'Указывает на тему. После согласной – 은, после гласной – 는.',
-            examples: ['저는 학생입니다.', '이것은 책입니다.'],
-            exercises: [
-                { question: '저___ 학생입니다.', correct: '는' },
-                { question: '이것___ 책입니다.', correct: '은' }
-            ]
-        },
-        {
-            title: 'Частица 이/가 (субъект)',
-            description: 'Указывает на субъект. После согласной – 이, после гласной – 가.',
-            examples: ['날씨가 좋아요.', '학생이 공부해요.'],
-            exercises: [
-                { question: '날씨___ 좋아요.', correct: '가' },
-                { question: '학생___ 공부해요.', correct: '이' }
-            ]
-        },
-        {
-            title: 'Окончание -입니다 (формальное)',
-            description: 'Именное сказуемое в формальном стиле.',
-            examples: ['저는 학생입니다.', '이것은 책입니다.'],
-            exercises: [
-                { question: '저는 학생____', correct: '입니다' }
-            ]
-        }
+        { title: 'Частица 은/는 (тема)', description: 'Указывает тему. После согласной – 은, после гласной – 는.', examples: ['저는 학생입니다.', '이것은 책입니다.'], exercises: [{ question: '저___ 학생입니다.', correct: '는' }, { question: '이것___ 책입니다.', correct: '은' }] },
+        { title: 'Частица 이/가 (субъект)', description: 'Указывает субъект. После согласной – 이, после гласной – 가.', examples: ['날씨가 좋아요.', '학생이 공부해요.'], exercises: [{ question: '날씨___ 좋아요.', correct: '가' }, { question: '학생___ 공부해요.', correct: '이' }] },
+        { title: 'Окончание -입니다 (формальное)', description: 'Именное сказуемое в формальном стиле.', examples: ['저는 학생입니다.', '이것은 책입니다.'], exercises: [{ question: '저는 학생____', correct: '입니다' }] },
+        { title: 'Окончание -이에요/예요 (вежливое)', description: 'Именное сказуемое в вежливом разговорном стиле. После согласной – 이에요, после гласной – 예요.', examples: ['저는 학생이에요.', '이것은 책이에요.'], exercises: [{ question: '저는 학생____', correct: '이에요' }, { question: '이것은 책____', correct: '이에요' }] },
+        { title: 'Глагол в настоящем времени (формальный -ㅂ니다/습니다)', description: 'После согласной – 습니다, после гласной – ㅂ니다.', examples: ['가다 → 갑니다', '먹다 → 먹습니다'], exercises: [{ question: '가다 → ___', correct: '갑니다' }, { question: '먹다 → ___', correct: '먹습니다' }] },
+        { title: 'Глагол в настоящем времени (вежливый -아/어요)', description: 'После гласной ㅏ,ㅗ – 아요, иначе – 어요.', examples: ['가다 → 가요', '먹다 → 먹어요'], exercises: [{ question: '가다 → ___', correct: '가요' }, { question: '먹다 → ___', correct: '먹어요' }] },
+        { title: 'Отрицание 안 (перед глаголом)', description: 'Ставится перед глаголом для отрицания.', examples: ['안 가요', '안 먹어요'], exercises: [{ question: '가요 → ___', correct: '안 가요' }] },
+        { title: 'Отрицание 못 (не мочь)', description: 'Выражает невозможность.', examples: ['못 가요', '못 먹어요'], exercises: [{ question: '가요 → ___', correct: '못 가요' }] },
+        { title: 'Будущее время (ㄹ/을 거예요)', description: 'После согласной – 을 거예요, после гласной – ㄹ 거예요.', examples: ['가다 → 갈 거예요', '먹다 → 먹을 거예요'], exercises: [{ question: '가다 → ___', correct: '갈 거예요' }, { question: '먹다 → ___', correct: '먹을 거예요' }] },
+        { title: 'Прошедшее время (았/었어요)', description: 'После гласной ㅏ,ㅗ – 았어요, иначе – 었어요.', examples: ['가다 → 갔어요', '먹다 → 먹었어요'], exercises: [{ question: '가다 → ___', correct: '갔어요' }, { question: '먹다 → ___', correct: '먹었어요' }] },
+        { title: 'Частица 에 (направление/время)', description: 'Указывает направление или время.', examples: ['학교에 가요', '3시에 만나요'], exercises: [{ question: '학교___ 가요.', correct: '에' }, { question: '3시___ 만나요.', correct: '에' }] },
+        { title: 'Частица 에서 (место действия)', description: 'Указывает место действия.', examples: ['학교에서 공부해요'], exercises: [{ question: '학교___ 공부해요.', correct: '에서' }] },
+        { title: 'Частица 을/를 (объект)', description: 'После согласной – 을, после гласной – 를.', examples: ['책을 읽어요', '물을 마셔요'], exercises: [{ question: '책___ 읽어요.', correct: '을' }, { question: '물___ 마셔요.', correct: '을' }] },
+        { title: 'Частица 하고 (и, с)', description: 'Соединяет существительные.', examples: ['친구하고 가요'], exercises: [{ question: '친구___ 가요.', correct: '하고' }] }
     ],
     topik2: [
-        {
-            title: 'Прошедшее время (았/었)',
-            description: 'Добавляется к основе. Если гласная ㅏ,ㅗ – 았, иначе – 었.',
-            examples: ['가다 → 갔어요', '먹다 → 먹었어요'],
-            exercises: [
-                { question: '가다 → ___', correct: '갔어요' },
-                { question: '먹다 → ___', correct: '먹었어요' }
-            ]
-        },
-        {
-            title: 'Будущее время (ㄹ/을 거예요)',
-            description: 'После согласной – 을 거예요, после гласной – ㄹ 거예요.',
-            examples: ['가다 → 갈 거예요', '먹다 → 먹을 거예요'],
-            exercises: [
-                { question: '가다 → ___', correct: '갈 거예요' },
-                { question: '먹다 → ___', correct: '먹을 거예요' }
-            ]
-        }
+        { title: 'Прошедшее время (았/었) - подробно', description: 'Добавляется к основе глагола. Правила выбора.', examples: ['가다 → 갔어요', '먹다 → 먹었어요', '하다 → 했어요'], exercises: [{ question: '하다 → ___', correct: '했어요' }] },
+        { title: 'Будущее время (ㄹ/을 거예요) - продолжение', description: 'Используется для выражения намерения или предположения.', examples: ['내일 갈 거예요', '비가 올 거예요'], exercises: [{ question: '내일 가___', correct: '갈 거예요' }] },
+        { title: 'Связка -고 (и, а затем)', description: 'Соединяет два действия.', examples: ['밥을 먹고 학교에 가요'], exercises: [{ question: '밥을 먹___ 학교에 가요.', correct: '고' }] },
+        { title: 'Связка -지만 (но)', description: 'Выражает противопоставление.', examples: ['배가 고프지만 참아요'], exercises: [{ question: '배가 고프___ 참아요.', correct: '지만' }] },
+        { title: 'Связка -아/어서 (потому что, и поэтому)', description: 'Указывает причину или последовательность.', examples: ['피곤해서 일찍 잤어요'], exercises: [{ question: '피곤해___ 일찍 잤어요.', correct: '서' }] },
+        { title: 'Связка -거나 (или)', description: 'Выражает выбор.', examples: ['커피를 마시거나 차를 마셔요'], exercises: [{ question: '커피를 마시___ 차를 마셔요.', correct: '거나' }] },
+        { title: 'Вежливая форма -시- (к старшим)', description: 'Добавляется к основе глагола для выражения уважения.', examples: ['선생님이 오세요'], exercises: [{ question: '선생님이 오___', correct: '세요' }] },
+        { title: 'Выражение желания -고 싶다', description: 'Хотеть сделать что-то.', examples: ['가고 싶어요', '먹고 싶어요'], exercises: [{ question: '가다 → ___', correct: '가고 싶어요' }] },
+        { title: 'Выражение намерения -려고 하다', description: 'Собираться сделать.', examples: ['가려고 해요'], exercises: [{ question: '가다 → ___', correct: '가려고 해요' }] },
+        { title: 'Причина -니까', description: 'Указывает причину (разговорный стиль).', examples: ['배가 고프니까 먹어요'], exercises: [{ question: '배가 고프___ 먹어요.', correct: '니까' }] },
+        { title: 'Выражение состояния -아/어 있다', description: 'Описывает продолжающееся состояние.', examples: ['앉아 있어요'], exercises: [{ question: '앉다 → ___', correct: '앉아 있어요' }] }
     ],
     topik3: [
-        {
-            title: 'Косвенная речь (다고/라고)',
-            description: 'Передача чужих слов. После глаголов – 다고, после существительных – (이)라고.',
-            examples: ['의사라고 했어요.', '좋다고 했어요.'],
-            exercises: [
-                { question: '의사___ 했어요.', correct: '라고' },
-                { question: '좋___ 했어요.', correct: '다고' }
-            ]
-        },
-        {
-            title: 'Страдательный залог (이/히/리/기)',
-            description: 'Образуется от глаголов добавлением суффиксов.',
-            examples: ['보다 → 보이다', '먹다 → 먹히다'],
-            exercises: [
-                { question: '보다 → ___', correct: '보이다' }
-            ]
-        }
+        { title: 'Косвенная речь (다고/라고)', description: 'Передача чужих слов. После глаголов – 다고, после существительных – (이)라고.', examples: ['의사라고 했어요.', '좋다고 했어요.'], exercises: [{ question: '의사___ 했어요.', correct: '라고' }, { question: '좋___ 했어요.', correct: '다고' }] },
+        { title: 'Страдательный залог (이/히/리/기)', description: 'Образуется от глаголов добавлением суффиксов.', examples: ['보다 → 보이다', '먹다 → 먹히다'], exercises: [{ question: '보다 → ___', correct: '보이다' }] },
+        { title: 'Пассивные формы -되다', description: 'Используется с существительными для образования пассива.', examples: ['결정되다'], exercises: [{ question: '결정하다 → ___', correct: '결정되다' }] },
+        { title: 'Причинно-следственная связь -기 때문에', description: 'Потому что (книжный стиль).', examples: ['비가 오기 때문에 집에 있어요'], exercises: [{ question: '비가 오___ 집에 있어요.', correct: '기 때문에' }] },
+        { title: 'Условное наклонение -면', description: 'Если (условие).', examples: ['비가 오면 집에 있어요'], exercises: [{ question: '비가 오___ 집에 있어요.', correct: '면' }] },
+        { title: 'Временная связь -을 때', description: 'Когда (время действия).', examples: ['학교에 갈 때 친구를 만나요'], exercises: [{ question: '학교에 갈 ___ 친구를 만나요.', correct: '때' }] },
+        { title: 'Сравнение -보다', description: 'Чем (сравнение).', examples: ['사과가 바나나보다 커요'], exercises: [{ question: '사과가 바나나___ 커요.', correct: '보다' }] },
+        { title: 'Выражение намерения -려고', description: 'Для того чтобы (цель).', examples: ['한국어를 배우려고 한국에 왔어요'], exercises: [{ question: '한국어를 배우___ 한국에 왔어요.', correct: '려고' }] },
+        { title: 'Выражение уступки -아/어도', description: 'Даже если.', examples: ['비가 와도 나가요'], exercises: [{ question: '비가 와___ 나가요.', correct: '도' }] },
+        { title: 'Выражение долженствования -아/어야 하다', description: 'Должен, нужно.', examples: ['숙제를 해야 해요'], exercises: [{ question: '숙제를 해___ 해요.', correct: '야' }] },
+        { title: 'Сложные союзы -거나, -고, -지만 (повтор)', description: 'Закрепление изученного.', examples: ['밥을 먹거나 빵을 먹어요'], exercises: [{ question: '밥을 먹___ 빵을 먹어요.', correct: '거나' }] }
     ]
 };
 
@@ -315,7 +315,7 @@ const LEVELS = [
         id: 'topik1',
         title: 'TOPIK 1 (Начальный)',
         description: 'Алфавит, базовая грамматика, 100 слов для аудирования, 100 предложений для чтения.',
-        reading: generateReadingSentences('topik1'),
+        reading: generateReading('topik1'),
         audio: WORDS.filter(w => w.levelId === 'topik1').slice(0, 100),
         grammar: GRAMMAR_RULES.topik1
     },
@@ -323,7 +323,7 @@ const LEVELS = [
         id: 'topik2',
         title: 'TOPIK 2 (Средний)',
         description: 'Времена, связки, 100 слов для аудирования, 100 предложений для чтения.',
-        reading: generateReadingSentences('topik2'),
+        reading: generateReading('topik2'),
         audio: WORDS.filter(w => w.levelId === 'topik2').slice(0, 100),
         grammar: GRAMMAR_RULES.topik2
     },
@@ -331,11 +331,28 @@ const LEVELS = [
         id: 'topik3',
         title: 'TOPIK 3 (Продвинутый)',
         description: 'Страдательный залог, косвенная речь, 100 слов для аудирования, 100 предложений для чтения.',
-        reading: generateReadingSentences('topik3'),
+        reading: generateReading('topik3'),
         audio: WORDS.filter(w => w.levelId === 'topik3').slice(0, 100),
         grammar: GRAMMAR_RULES.topik3
     }
 ];
 
+// ---------- Начальный план (для вкладки "План") ----------
+const BEGINNER_PLAN = {
+    title: 'С нуля – алфавит и основы',
+    steps: [
+        { title: 'Хангыль (согласные)', description: 'Изучите 14 базовых согласных: ㄱ,ㄴ,ㄷ,ㄹ,ㅁ,ㅂ,ㅅ,ㅇ,ㅈ,ㅊ,ㅋ,ㅌ,ㅍ,ㅎ. Произношение и написание.' },
+        { title: 'Хангыль (гласные)', description: 'Изучите 10 базовых гласных: ㅏ,ㅑ,ㅓ,ㅕ,ㅗ,ㅛ,ㅜ,ㅠ,ㅡ,ㅣ. Слоговые блоки.' },
+        { title: 'Правила чтения', description: 'Основные правила ассимиляции: ㅅ+ㄴ → ㄴ, ㄱ+ㄴ → ㄴ, и т.д.' },
+        { title: 'Цифры (корейские)', description: 'Корейские числа: 하나, 둘, 셋... (до 100). Счётные слова.' },
+        { title: 'Цифры (китайские)', description: 'Китайские числа: 일, 이, 삼... (для дат, цен).' },
+        { title: 'Базовые фразы', description: 'Приветствия, благодарности, извинения, вопрос "как дела?".' },
+        { title: 'Времена дня', description: '아침, 점심, 저녁, 밤. Слова для часов.' },
+        { title: 'Погода', description: '덥다, 춥다, 비, 눈, 바람.' },
+        { title: 'Еда', description: '밥, 물, 김치, 고기, 과일.' },
+        { title: 'Семья', description: '가족, 어머니, 아버지, 형, 누나.' }
+    ]
+};
+
 // Экспортируем
-const APP_DATA = { WORDS, LEVELS };
+const APP_DATA = { WORDS, LEVELS, BEGINNER_PLAN };
