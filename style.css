@@ -1,14 +1,38 @@
+/* ===== ПЕРЕМЕННЫЕ (светлая тема по умолчанию) ===== */
 :root {
-    --primary: #ff6b35;
-    --secondary: #2d2d2d;
     --bg: #f5f3f0;
     --card-bg: #ffffff;
     --text: #1e1e1e;
-    --border-radius: 20px;
-    --shadow: 0 4px 12px rgba(0,0,0,0.08);
-    --transition: 0.3s ease;
+    --text-secondary: #555;
+    --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    --primary: #ff6b35;
+    --primary-hover: #e55a2b;
+    --secondary-bg: #eee;
+    --border: #ddd;
+    --input-bg: #fff;
+    --modal-overlay: rgba(0, 0, 0, 0.5);
+    --nav-bg: #fff;
+    --header-bg: #fff;
 }
 
+/* ===== ТЁМНАЯ ТЕМА ===== */
+body.dark-theme {
+    --bg: #1a1a1a;
+    --card-bg: #2d2d2d;
+    --text: #e0e0e0;
+    --text-secondary: #aaa;
+    --shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    --primary: #ff8a5c;
+    --primary-hover: #ffa07a;
+    --secondary-bg: #3a3a3a;
+    --border: #555;
+    --input-bg: #3a3a3a;
+    --modal-overlay: rgba(0, 0, 0, 0.7);
+    --nav-bg: #2d2d2d;
+    --header-bg: #2d2d2d;
+}
+
+/* ===== БАЗОВЫЕ СТИЛИ ===== */
 * {
     margin: 0;
     padding: 0;
@@ -23,6 +47,7 @@ body {
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    transition: background 0.3s, color 0.3s;
 }
 
 #app-header {
@@ -30,15 +55,21 @@ body {
     justify-content: space-between;
     align-items: center;
     padding: 12px 20px;
-    background: white;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    background: var(--header-bg);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     flex-shrink: 0;
     z-index: 10;
+    transition: background 0.3s;
 }
 .logo {
     font-size: 1.3rem;
     font-weight: 700;
     color: var(--primary);
+}
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
 }
 #coin-display {
     font-weight: 600;
@@ -46,6 +77,27 @@ body {
     padding: 4px 12px;
     border-radius: 30px;
     font-size: 0.9rem;
+    color: #333;
+}
+body.dark-theme #coin-display {
+    background: #4a3a2a;
+    color: #e0e0e0;
+}
+.theme-btn {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 30px;
+    transition: background 0.2s;
+    line-height: 1;
+}
+.theme-btn:hover {
+    background: rgba(0, 0, 0, 0.1);
+}
+body.dark-theme .theme-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
 }
 
 #app-main {
@@ -53,20 +105,23 @@ body {
     overflow-y: auto;
     padding: 16px 20px 80px;
     -webkit-overflow-scrolling: touch;
+    background: var(--bg);
+    transition: background 0.3s;
 }
 
 #app-nav {
     display: flex;
     justify-content: space-around;
-    background: white;
+    background: var(--nav-bg);
     padding: 8px 0;
-    box-shadow: 0 -2px 10px rgba(0,0,0,0.06);
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.06);
     flex-shrink: 0;
     position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
     z-index: 20;
+    transition: background 0.3s;
 }
 .nav-btn {
     background: none;
@@ -77,18 +132,25 @@ body {
     transition: var(--transition);
     cursor: pointer;
     border-radius: 30px;
+    color: var(--text);
 }
 .nav-btn.active {
     opacity: 1;
     background: #fff0e6;
 }
+body.dark-theme .nav-btn.active {
+    background: #4a3a2a;
+}
 
+/* ===== КАРТОЧКИ ===== */
 .card {
     background: var(--card-bg);
-    border-radius: var(--border-radius);
+    border-radius: 20px;
     padding: 16px;
     margin-bottom: 16px;
     box-shadow: var(--shadow);
+    color: var(--text);
+    transition: background 0.3s, box-shadow 0.3s, color 0.3s;
 }
 .row {
     display: flex;
@@ -110,22 +172,29 @@ body {
     font-size: 1rem;
     font-weight: 600;
     cursor: pointer;
-    transition: var(--transition);
+    transition: background 0.3s, transform 0.1s;
+}
+.btn-primary:hover {
+    background: var(--primary-hover);
 }
 .btn-primary:active {
     transform: scale(0.96);
 }
 .btn-secondary {
-    background: #eee;
-    color: #333;
+    background: var(--secondary-bg);
+    color: var(--text);
     border: none;
     padding: 8px 16px;
     border-radius: 30px;
     cursor: pointer;
+    transition: background 0.3s, color 0.3s;
+}
+.btn-secondary:hover {
+    opacity: 0.8;
 }
 
 .progress-bar {
-    background: #eee;
+    background: var(--secondary-bg);
     border-radius: 30px;
     height: 10px;
     overflow: hidden;
@@ -138,7 +207,7 @@ body {
     transition: width 0.5s ease;
 }
 
-/* Lesson */
+/* ===== ЗАДАНИЯ ===== */
 .lesson-container {
     padding-bottom: 20px;
 }
@@ -153,25 +222,35 @@ body {
     margin: 12px 0;
 }
 .option-btn {
-    background: #f0f0f0;
+    background: var(--secondary-bg);
     border: 2px solid transparent;
     padding: 10px 16px;
     border-radius: 16px;
     font-size: 1rem;
-    transition: var(--transition);
+    color: var(--text);
+    transition: all 0.2s;
     cursor: pointer;
 }
 .option-btn.selected {
     border-color: var(--primary);
     background: #fff0e6;
 }
+body.dark-theme .option-btn.selected {
+    background: #4a3a2a;
+}
 .option-btn.correct {
     border-color: #2ecc71;
     background: #eafaf1;
 }
+body.dark-theme .option-btn.correct {
+    background: #1a3a2a;
+}
 .option-btn.wrong {
     border-color: #e74c3c;
     background: #fdedec;
+}
+body.dark-theme .option-btn.wrong {
+    background: #3a1a1a;
 }
 
 .drag-area {
@@ -179,26 +258,27 @@ body {
     flex-wrap: wrap;
     gap: 8px;
     padding: 12px;
-    border: 2px dashed #ccc;
+    border: 2px dashed var(--border);
     border-radius: 16px;
     min-height: 60px;
     margin: 12px 0;
 }
 .drag-item {
-    background: white;
+    background: var(--card-bg);
     padding: 8px 16px;
     border-radius: 30px;
     box-shadow: var(--shadow);
     cursor: grab;
     user-select: none;
     touch-action: none;
+    color: var(--text);
 }
 .drag-item:active {
     cursor: grabbing;
 }
 
 #writing-canvas {
-    border: 2px solid #ddd;
+    border: 2px solid var(--border);
     border-radius: 16px;
     background: white;
     width: 100%;
@@ -207,26 +287,26 @@ body {
     touch-action: none;
 }
 
-/* Dictionary */
+/* ===== СЛОВАРЬ ===== */
 .dict-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 10px 0;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--border);
 }
 .dict-word {
     font-weight: 600;
 }
 .dict-trans {
-    color: #666;
+    color: var(--text-secondary);
 }
 
-/* Modal for repetition */
+/* ===== МОДАЛЬНОЕ ОКНО (карточки повторения) ===== */
 .modal-overlay {
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.5);
+    background: var(--modal-overlay);
     display: none;
     align-items: center;
     justify-content: center;
@@ -237,13 +317,15 @@ body {
     display: flex;
 }
 .modal-content {
-    background: white;
+    background: var(--card-bg);
     border-radius: 30px;
     padding: 30px;
     max-width: 400px;
     width: 100%;
     text-align: center;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    color: var(--text);
+    transition: background 0.3s, color 0.3s;
 }
 .modal-content .word-display {
     font-size: 2.5rem;
@@ -253,8 +335,10 @@ body {
     width: 100%;
     padding: 12px;
     border-radius: 16px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--border);
     font-size: 1.2rem;
+    background: var(--input-bg);
+    color: var(--text);
     margin: 12px 0;
 }
 .modal-buttons {
@@ -290,14 +374,16 @@ body {
     color: white;
 }
 
-/* Reading / Audio */
+/* ===== ЧТЕНИЕ / АУДИО ===== */
 .reading-text {
-    background: #f9f9f9;
+    background: var(--secondary-bg);
     padding: 16px;
     border-radius: 16px;
     font-size: 1.3rem;
     line-height: 1.8;
     margin: 12px 0;
+    color: var(--text);
+    transition: background 0.3s, color 0.3s;
 }
 .audio-play-btn {
     background: #3498db;
@@ -308,7 +394,11 @@ body {
     font-size: 1rem;
     cursor: pointer;
 }
+.audio-play-btn:hover {
+    opacity: 0.85;
+}
 
+/* ===== АДАПТИВНОСТЬ ===== */
 @media (max-width: 480px) {
     .row .card {
         flex: 1 1 100%;
@@ -320,17 +410,4 @@ body {
     .modal-content {
         padding: 20px;
     }
-}
-/* кнопки навигации в разделах */
-.row button[disabled] {
-    opacity: 0.4;
-    cursor: not-allowed;
-}
-.reading-text {
-    font-size: 1.5rem;
-    line-height: 1.8;
-    background: #f9f9f9;
-    padding: 20px;
-    border-radius: 16px;
-    margin: 12px 0;
 }
