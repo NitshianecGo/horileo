@@ -1,8 +1,8 @@
-// app.js – полная логика
+// app.js – вся логика приложения
 
 let currentLevelId = 'topik1';
-let currentTab = 'home'; // home, plan, reading, audio, grammar, dictionary, profile
-let currentIndex = 0; // для чтения, аудио, грамматики
+let currentTab = 'home';
+let currentIndex = 0;
 let currentGrammarExerciseIndex = 0;
 let readingItems = [];
 let audioItems = [];
@@ -29,7 +29,7 @@ function loadProgress() {
         wordsLearned: 0,
         totalLessons: 0,
         learnedWords: {},
-        readingProgress: {}, // { levelId: { index: 5, completed: [0,1,2] } }
+        readingProgress: {},
         audioProgress: {},
         grammarProgress: {}
     };
@@ -58,9 +58,6 @@ function navigateTo(tab) {
         case 'plan': renderLevelSelection(); break;
         case 'dictionary': renderDictionary(); break;
         case 'profile': renderProfile(); break;
-        case 'reading': renderReading(); break;
-        case 'audio': renderAudio(); break;
-        case 'grammar': renderGrammar(); break;
         default: renderHome();
     }
 }
@@ -73,7 +70,7 @@ navBtns.forEach(btn => {
 
 // ----- Главная -----
 function renderHome() {
-    const totalTasks = 100; // условно
+    const totalTasks = 100;
     const completed = userProgress.completedTasks ? userProgress.completedTasks.length : 0;
     const pct = Math.min(100, Math.round((completed / totalTasks) * 100));
     let html = `
@@ -116,7 +113,7 @@ function continueLearning() {
     selectLevel(levelId);
 }
 
-// ----- План (для совместимости, но теперь не используется для уроков) -----
+// ----- План -----
 function renderLevelSelection() {
     let html = `<h2>📚 Выберите уровень</h2>`;
     LEVELS.forEach(l => {
@@ -147,12 +144,11 @@ function renderLevelPlan(levelId) {
     mainEl.innerHTML = html;
 }
 
-// ----- Раздел ЧТЕНИЕ -----
+// ----- Чтение -----
 function openReadingSection() {
     const level = LEVELS.find(l => l.id === currentLevelId);
     if (!level) return;
     readingItems = level.reading;
-    // Восстанавливаем прогресс
     const progress = userProgress.readingProgress?.[currentLevelId] || { index: 0, completed: [] };
     currentIndex = progress.index || 0;
     if (currentIndex >= readingItems.length) currentIndex = readingItems.length - 1;
@@ -161,12 +157,12 @@ function openReadingSection() {
 
 function renderReading() {
     if (readingItems.length === 0) {
-        mainEl.innerHTML = `<div class="card"><h2>Нет предложений для чтения</h2><button class="btn-primary" onclick="navigateTo('home')">Назад</button></div>`;
+        mainEl.innerHTML = `<div class="card"><h2>Нет предложений</h2><button class="btn-primary" onclick="navigateTo('home')">Назад</button></div>`;
         return;
     }
     const item = readingItems[currentIndex];
     const total = readingItems.length;
-    const progress = userProgress.readingProgress?.[currentLevelId] || { index: 0, completed: [] };
+    const progress = userProgress.readingProgress?.[currentLevelId] || { index: 0, completed: [], skipped: [] };
     const isCompleted = progress.completed && progress.completed.includes(currentIndex);
     const isSkipped = progress.skipped && progress.skipped.includes(currentIndex);
 
@@ -198,7 +194,6 @@ function renderReading() {
 function readingCheck() {
     const display = document.getElementById('translation-display');
     if (display) display.style.display = 'block';
-    // Отметить как пройденное, если ещё не отмечено
     const progress = userProgress.readingProgress?.[currentLevelId] || { index: 0, completed: [], skipped: [] };
     if (!progress.completed) progress.completed = [];
     if (!progress.skipped) progress.skipped = [];
@@ -209,7 +204,6 @@ function readingCheck() {
         userProgress.readingProgress[currentLevelId] = progress;
         saveProgress();
         document.getElementById('feedback').innerHTML = '<span style="color:green;">✅ Отлично! +1 ☕</span>';
-        // Обновим статус
         const statusSpan = document.querySelector('.card > div:last-child span');
         if (statusSpan) statusSpan.textContent = '✅ Пройдено';
     } else {
@@ -257,7 +251,7 @@ function readingPrev() {
     }
 }
 
-// ----- Раздел АУДИРОВАНИЕ (аналогично чтению) -----
+// ----- Аудирование (аналогично чтению) -----
 function openAudioSection() {
     const level = LEVELS.find(l => l.id === currentLevelId);
     if (!level) return;
@@ -270,12 +264,12 @@ function openAudioSection() {
 
 function renderAudio() {
     if (audioItems.length === 0) {
-        mainEl.innerHTML = `<div class="card"><h2>Нет слов для аудирования</h2><button class="btn-primary" onclick="navigateTo('home')">Назад</button></div>`;
+        mainEl.innerHTML = `<div class="card"><h2>Нет слов</h2><button class="btn-primary" onclick="navigateTo('home')">Назад</button></div>`;
         return;
     }
     const item = audioItems[currentIndex];
     const total = audioItems.length;
-    const progress = userProgress.audioProgress?.[currentLevelId] || { index: 0, completed: [] };
+    const progress = userProgress.audioProgress?.[currentLevelId] || { index: 0, completed: [], skipped: [] };
     const isCompleted = progress.completed && progress.completed.includes(currentIndex);
     const isSkipped = progress.skipped && progress.skipped.includes(currentIndex);
 
@@ -284,9 +278,9 @@ function renderAudio() {
             <h2>🎧 Аудирование (${currentLevelId})</h2>
             <p>Слово ${currentIndex+1} из ${total}</p>
             <div style="font-size:2rem; margin:12px 0;">🔊</div>
-            <button class="btn-secondary audio-play-btn" onclick="playAudio('${item.korean}')">▶ Прослушать</button>
+            <button class="btn-secondary audio-play-btn" onclick="playAudio('${item.word}')">▶ Прослушать</button>
             <div id="translation-display" style="display:none; background:#f0f8ff; padding:12px; border-radius:16px; margin:8px 0;">
-                <strong>Перевод:</strong> ${item.russian}
+                <strong>Перевод:</strong> ${item.translation}
             </div>
             <div id="feedback" style="margin:8px 0;"></div>
             <div class="row" style="justify-content:center; gap:10px;">
@@ -365,7 +359,7 @@ function audioPrev() {
     }
 }
 
-// ----- Раздел ГРАММАТИКА (правила с упражнениями) -----
+// ----- Грамматика -----
 function openGrammarSection() {
     const level = LEVELS.find(l => l.id === currentLevelId);
     if (!level) return;
@@ -379,16 +373,14 @@ function openGrammarSection() {
 
 function renderGrammar() {
     if (grammarItems.length === 0) {
-        mainEl.innerHTML = `<div class="card"><h2>Нет грамматических правил</h2><button class="btn-primary" onclick="navigateTo('home')">Назад</button></div>`;
+        mainEl.innerHTML = `<div class="card"><h2>Нет правил</h2><button class="btn-primary" onclick="navigateTo('home')">Назад</button></div>`;
         return;
     }
     const rule = grammarItems[currentIndex];
     const total = grammarItems.length;
-    const progress = userProgress.grammarProgress?.[currentLevelId] || { ruleIndex: 0, exerciseIndex: 0, completed: [] };
+    const progress = userProgress.grammarProgress?.[currentLevelId] || { ruleIndex: 0, exerciseIndex: 0, completed: [], skipped: [] };
     const isCompleted = progress.completed && progress.completed.includes(currentIndex);
-
-    // Показываем правило и упражнения (для простоты покажем первое упражнение)
-    const exercise = rule.exercises && rule.exercises.length > 0 ? rule.exercises[0] : null;
+    const isSkipped = progress.skipped && progress.skipped.includes(currentIndex);
 
     let html = `
         <div class="card">
@@ -396,18 +388,18 @@ function renderGrammar() {
             <p>Правило ${currentIndex+1} из ${total}</p>
             <h3>${rule.title}</h3>
             <p>${rule.description}</p>
-            <div style="background:#f0f0f0; padding:12px; border-radius:16px; margin:8px 0;">
+            <div style="background:var(--secondary-bg); padding:12px; border-radius:16px; margin:8px 0;">
                 <strong>Примеры:</strong>
                 <ul>
                     ${rule.examples.map(ex => `<li>${ex}</li>`).join('')}
                 </ul>
             </div>
-            ${exercise ? `
+            ${rule.exercises && rule.exercises.length > 0 ? `
                 <div style="margin-top:16px;">
                     <h4>Упражнение:</h4>
-                    <p>${exercise.question}</p>
-                    <input type="text" id="grammar-answer" placeholder="Введите ответ" style="width:100%; padding:10px; border-radius:16px; border:1px solid #ddd; margin:8px 0;">
-                    <button class="btn-primary" onclick="checkGrammarAnswer('${exercise.correct}')">Проверить</button>
+                    <p>${rule.exercises[0].question}</p>
+                    <input type="text" id="grammar-answer" placeholder="Введите ответ" style="width:100%; padding:10px; border-radius:16px; border:1px solid var(--border); margin:8px 0; background:var(--input-bg); color:var(--text);">
+                    <button class="btn-primary" onclick="checkGrammarAnswer('${rule.exercises[0].correct}')">Проверить</button>
                     <div id="grammar-feedback" style="margin:8px 0;"></div>
                 </div>
             ` : `<p>Нет упражнений для этого правила.</p>`}
@@ -419,7 +411,7 @@ function renderGrammar() {
                 <button class="btn-secondary" onclick="grammarNext()" ${currentIndex === total-1 ? 'disabled' : ''}>Дальше ➡</button>
             </div>
             <div style="margin-top:12px;">
-                <span>Статус: ${isCompleted ? '✅ Пройдено' : '⬜ Не пройдено'}</span>
+                <span>Статус: ${isCompleted ? '✅ Пройдено' : isSkipped ? '⏭ Пропущено' : '⬜ Не пройдено'}</span>
             </div>
             <br>
             <button class="btn-primary" onclick="navigateTo('home')">На главную</button>
@@ -435,7 +427,6 @@ function checkGrammarAnswer(correct) {
     const answer = input.value.trim();
     if (answer === correct) {
         fb.innerHTML = '<span style="color:green;">✅ Правильно!</span>';
-        // Можно дать монетку
         userProgress.coins = (userProgress.coins || 0) + 1;
         saveProgress();
     } else {
@@ -444,7 +435,7 @@ function checkGrammarAnswer(correct) {
 }
 
 function grammarComplete() {
-    const progress = userProgress.grammarProgress?.[currentLevelId] || { ruleIndex: 0, exerciseIndex: 0, completed: [] };
+    const progress = userProgress.grammarProgress?.[currentLevelId] || { ruleIndex: 0, exerciseIndex: 0, completed: [], skipped: [] };
     if (!progress.completed) progress.completed = [];
     if (!progress.completed.includes(currentIndex)) {
         progress.completed.push(currentIndex);
@@ -502,7 +493,6 @@ function grammarPrev() {
     }
 }
 
-// ----- Общая озвучка -----
 // ----- Озвучка с выбором женского голоса -----
 function playAudio(text) {
     if (!window.speechSynthesis) {
@@ -514,45 +504,36 @@ function playAudio(text) {
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'ko-KR';
     utterance.rate = parseFloat(localStorage.getItem('horileo_speed')) || 0.9;
-    utterance.pitch = 1.0; // стандартная высота
+    utterance.pitch = 1.0;
 
-    // Получаем список голосов
     const voices = window.speechSynthesis.getVoices();
-    // Ищем корейский женский голос (приоритет)
     let selectedVoice = null;
-    // Сначала ищем явно женский (содержит 'female' или 'Google' или '여성')
     for (const v of voices) {
         if (v.lang.startsWith('ko')) {
             const name = v.name.toLowerCase();
-            // Отдаём предпочтение голосам с пометкой female, Google (обычно женский), или содержащим '여성'
             if (name.includes('female') || name.includes('google') || name.includes('여성')) {
                 selectedVoice = v;
                 break;
             }
         }
     }
-    // Если не нашли, берём первый корейский
     if (!selectedVoice) {
         selectedVoice = voices.find(v => v.lang.startsWith('ko'));
     }
     if (selectedVoice) {
         utterance.voice = selectedVoice;
         console.log('Выбран голос:', selectedVoice.name);
-    } else {
-        console.warn('Корейский голос не найден, используется стандартный.');
     }
-
     window.speechSynthesis.speak(utterance);
 }
 
-// ----- Словарь (упрощённо) -----
+// ----- Словарь -----
 function renderDictionary() {
-    // Показываем слова, связанные с текущим уровнем
-    const levelDict = DICTIONARY.filter(w => w.levelId === currentLevelId);
+    const levelWords = WORDS.filter(w => w.levelId === currentLevelId);
     let html = `<h2>📖 Словарь (${currentLevelId})</h2>`;
-    html += `<p>Всего слов: ${levelDict.length}</p>`;
+    html += `<p>Всего слов: ${levelWords.length}</p>`;
     html += `<div id="dict-list">`;
-    levelDict.slice(0, 50).forEach(item => {
+    levelWords.slice(0, 50).forEach(item => {
         const learned = userProgress.learnedWords?.[item.word] || false;
         html += `
             <div class="dict-item">
@@ -567,10 +548,98 @@ function renderDictionary() {
     mainEl.innerHTML = html;
 }
 
+// ----- Карточки повторения -----
+let repetitionQueue = [];
+let currentRepIndex = 0;
+let repetitionMode = 'ko->ru';
+
+function startRepetition() {
+    const levelWords = WORDS.filter(w => w.levelId === currentLevelId);
+    const unlearned = levelWords.filter(w => !(userProgress.learnedWords?.[w.word]));
+    let pool = unlearned.length > 0 ? unlearned : levelWords;
+    repetitionQueue = shuffle(pool).slice(0, 20);
+    currentRepIndex = 0;
+    const mode = confirm('Повторять с корейского на русский? (OK – корейский→русский, Отмена – русский→корейский)');
+    repetitionMode = mode ? 'ko->ru' : 'ru->ko';
+    showRepetitionCard();
+}
+
+function showRepetitionCard() {
+    if (currentRepIndex >= repetitionQueue.length) {
+        alert('🎉 Сессия повторения завершена.');
+        renderDictionary();
+        return;
+    }
+    const word = repetitionQueue[currentRepIndex];
+    const isKoToRu = repetitionMode === 'ko->ru';
+    const displayText = isKoToRu ? word.word : word.translation;
+    const expectedAnswer = isKoToRu ? word.translation : word.word;
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay show';
+    modal.id = 'rep-modal';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <h2>🔁 Повторение (${currentRepIndex+1}/${repetitionQueue.length})</h2>
+            <div class="word-display">${displayText}</div>
+            <button class="btn-secondary audio-play-btn" onclick="playAudio('${word.word}')">🔊 Прослушать</button>
+            <input type="text" id="rep-answer" placeholder="Введите перевод" autofocus>
+            <div id="rep-feedback"></div>
+            <div class="modal-buttons">
+                <button class="btn-dontknow" onclick="dontKnow()">😕 Я не знаю</button>
+                <button class="btn-check" onclick="checkRepetition('${expectedAnswer}')">✅ Проверить</button>
+                <button class="btn-next" onclick="nextRepetition()">➡️ Продолжить</button>
+                <button class="btn-close" onclick="closeRepetition()">❌ Закрыть</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    setTimeout(() => document.getElementById('rep-answer')?.focus(), 100);
+}
+
+function checkRepetition(expected) {
+    const input = document.getElementById('rep-answer');
+    const userAnswer = input.value.trim();
+    const feedback = document.getElementById('rep-feedback');
+    if (userAnswer.toLowerCase() === expected.toLowerCase()) {
+        feedback.innerHTML = `<span style="color:green;">✅ Правильно!</span>`;
+        const word = repetitionQueue[currentRepIndex];
+        if (!userProgress.learnedWords) userProgress.learnedWords = {};
+        userProgress.learnedWords[word.word] = true;
+        userProgress.wordsLearned = (userProgress.wordsLearned || 0) + 1;
+        saveProgress();
+        setTimeout(() => nextRepetition(), 1200);
+    } else {
+        feedback.innerHTML = `<span style="color:red;">❌ Неверно. Правильно: ${expected}</span>`;
+    }
+}
+
+function dontKnow() {
+    const feedback = document.getElementById('rep-feedback');
+    const word = repetitionQueue[currentRepIndex];
+    const expected = repetitionMode === 'ko->ru' ? word.translation : word.word;
+    feedback.innerHTML = `<span style="color:orange;">😕 Правильный ответ: ${expected}</span>`;
+}
+
+function nextRepetition() {
+    currentRepIndex++;
+    closeRepetition();
+    if (currentRepIndex < repetitionQueue.length) {
+        showRepetitionCard();
+    } else {
+        alert('🎉 Сессия завершена!');
+        renderDictionary();
+    }
+}
+
+function closeRepetition() {
+    const modal = document.getElementById('rep-modal');
+    if (modal) modal.remove();
+}
+
 // ----- Профиль -----
 function renderProfile() {
-    const totalWords = DICTIONARY.length;
-    const learnedWords = Object.keys(userProgress.learnedWords || {}).length;
+    const totalWords = WORDS.filter(w => w.levelId === currentLevelId).length;
+    const learnedWords = Object.keys(userProgress.learnedWords || {}).filter(w => WORDS.find(word => word.word === w && word.levelId === currentLevelId)).length;
     const completedLessons = userProgress.totalLessons || 0;
     const coins = userProgress.coins || 0;
     let level = 'TOPIK 1';
@@ -579,7 +648,7 @@ function renderProfile() {
     const html = `
         <div class="card">
             <h2>👤 Мой прогресс</h2>
-            <p>🐯 Выучено слов: ${learnedWords}/${totalWords}</p>
+            <p>🐯 Выучено слов (${currentLevelId}): ${learnedWords}/${totalWords}</p>
             <p>📚 Пройдено уроков: ${completedLessons}</p>
             <p>☕ Чашек (очков): ${coins}</p>
             <p>🏆 Уровень: ${level}</p>
@@ -606,20 +675,16 @@ function resetProgress() {
     }
 }
 
-// ----- Инициализация приложения -----
-document.addEventListener('DOMContentLoaded', function() {
-    // Загрузка темы
-    loadTheme();
-    // Загрузка прогресса
-    loadProgress();
-    navigateTo('home');
-    // Активация Speech Synthesis для iOS
-    document.addEventListener('touchstart', () => {
-        if (!window.speechSynthesis) return;
-        window.speechSynthesis.getVoices();
-    }, { once: true });
-});
-// ===== УПРАВЛЕНИЕ ТЕМОЙ =====
+// ----- Утилиты -----
+function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+}
+
+// ----- Управление темой -----
 function toggleTheme() {
     const body = document.body;
     body.classList.toggle('dark-theme');
@@ -641,11 +706,24 @@ function loadTheme() {
     }
 }
 
-// Назначаем обработчик после загрузки DOM
+// ----- Инициализация -----
 document.addEventListener('DOMContentLoaded', function() {
-    const themeBtn = document.getElementById('theme-toggle');
-    if (themeBtn) {
-        themeBtn.addEventListener('click', toggleTheme);
-    }
     loadTheme();
+    loadProgress();
+    navigateTo('home');
+    // Подгрузка голосов для Speech Synthesis
+    if (window.speechSynthesis) {
+        window.speechSynthesis.getVoices();
+        window.speechSynthesis.onvoiceschanged = () => {
+            window.speechSynthesis.getVoices();
+        };
+    }
+    // Обработчик кнопки темы
+    const themeBtn = document.getElementById('theme-toggle');
+    if (themeBtn) themeBtn.addEventListener('click', toggleTheme);
 });
+
+// Активация Speech для iOS (по касанию)
+document.addEventListener('touchstart', () => {
+    if (window.speechSynthesis) window.speechSynthesis.getVoices();
+}, { once: true });
