@@ -1,4 +1,3 @@
-/* Базовые переменные и сброс */
 :root {
     --primary: #ff6b35;
     --secondary: #2d2d2d;
@@ -14,7 +13,7 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+    font-family: 'Segoe UI', Roboto, system-ui, -apple-system, sans-serif;
 }
 
 body {
@@ -26,7 +25,6 @@ body {
     flex-direction: column;
 }
 
-/* Шапка */
 #app-header {
     display: flex;
     justify-content: space-between;
@@ -50,7 +48,6 @@ body {
     font-size: 0.9rem;
 }
 
-/* Основная область */
 #app-main {
     flex: 1;
     overflow-y: auto;
@@ -58,7 +55,6 @@ body {
     -webkit-overflow-scrolling: touch;
 }
 
-/* Нижняя навигация */
 #app-nav {
     display: flex;
     justify-content: space-around;
@@ -87,7 +83,6 @@ body {
     background: #fff0e6;
 }
 
-/* Карточки, плитки, контейнеры */
 .card {
     background: var(--card-bg);
     border-radius: var(--border-radius);
@@ -105,7 +100,6 @@ body {
     min-width: 120px;
 }
 
-/* Кнопки */
 .btn-primary {
     background: var(--primary);
     color: white;
@@ -129,7 +123,6 @@ body {
     cursor: pointer;
 }
 
-/* Прогресс-бар */
 .progress-bar {
     background: #eee;
     border-radius: 30px;
@@ -144,7 +137,7 @@ body {
     transition: width 0.5s ease;
 }
 
-/* Экран урока */
+/* Lesson */
 .lesson-container {
     padding-bottom: 20px;
 }
@@ -202,17 +195,7 @@ body {
 .drag-item:active {
     cursor: grabbing;
 }
-.drag-over {
-    border-color: var(--primary);
-    background: #fff8f3;
-}
 
-/* Поле для письма */
-.canvas-wrapper {
-    display: flex;
-    justify-content: center;
-    margin: 12px 0;
-}
 #writing-canvas {
     border: 2px solid #ddd;
     border-radius: 16px;
@@ -223,7 +206,7 @@ body {
     touch-action: none;
 }
 
-/* Словарь */
+/* Dictionary */
 .dict-item {
     display: flex;
     justify-content: space-between;
@@ -238,7 +221,7 @@ body {
     color: #666;
 }
 
-/* Модалка для карточек повторения */
+/* Modal for repetition */
 .modal-overlay {
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
@@ -247,6 +230,7 @@ body {
     align-items: center;
     justify-content: center;
     z-index: 100;
+    padding: 20px;
 }
 .modal-overlay.show {
     display: flex;
@@ -256,12 +240,74 @@ body {
     border-radius: 30px;
     padding: 30px;
     max-width: 400px;
-    width: 90%;
+    width: 100%;
     text-align: center;
     box-shadow: 0 20px 60px rgba(0,0,0,0.3);
 }
+.modal-content .word-display {
+    font-size: 2.5rem;
+    margin: 16px 0;
+}
+.modal-content input {
+    width: 100%;
+    padding: 12px;
+    border-radius: 16px;
+    border: 1px solid #ddd;
+    font-size: 1.2rem;
+    margin: 12px 0;
+}
+.modal-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 12px;
+}
+.modal-buttons button {
+    flex: 1;
+    min-width: 80px;
+    padding: 10px 16px;
+    border-radius: 30px;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+}
+.btn-dontknow {
+    background: #f1c40f;
+    color: #333;
+}
+.btn-check {
+    background: #2ecc71;
+    color: white;
+}
+.btn-next {
+    background: var(--primary);
+    color: white;
+}
+.btn-close {
+    background: #e74c3c;
+    color: white;
+}
 
-/* Адаптив */
+/* Reading / Audio */
+.reading-text {
+    background: #f9f9f9;
+    padding: 16px;
+    border-radius: 16px;
+    font-size: 1.3rem;
+    line-height: 1.8;
+    margin: 12px 0;
+}
+.audio-play-btn {
+    background: #3498db;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 30px;
+    font-size: 1rem;
+    cursor: pointer;
+}
+
 @media (max-width: 480px) {
     .row .card {
         flex: 1 1 100%;
@@ -269,5 +315,8 @@ body {
     .nav-btn {
         font-size: 1.5rem;
         padding: 4px 12px;
+    }
+    .modal-content {
+        padding: 20px;
     }
 }
