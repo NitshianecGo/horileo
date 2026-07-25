@@ -606,8 +606,46 @@ function resetProgress() {
     }
 }
 
-// Инициализация Speech Synthesis для iOS
-document.addEventListener('touchstart', () => {
-    if (!window.speechSynthesis) return;
-    window.speechSynthesis.getVoices();
-}, { once: true });
+// ----- Инициализация приложения -----
+document.addEventListener('DOMContentLoaded', function() {
+    // Загрузка темы
+    loadTheme();
+    // Загрузка прогресса
+    loadProgress();
+    navigateTo('home');
+    // Активация Speech Synthesis для iOS
+    document.addEventListener('touchstart', () => {
+        if (!window.speechSynthesis) return;
+        window.speechSynthesis.getVoices();
+    }, { once: true });
+});
+// ===== УПРАВЛЕНИЕ ТЕМОЙ =====
+function toggleTheme() {
+    const body = document.body;
+    body.classList.toggle('dark-theme');
+    const isDark = body.classList.contains('dark-theme');
+    localStorage.setItem('horileo_theme', isDark ? 'dark' : 'light');
+    const btn = document.getElementById('theme-toggle');
+    if (btn) btn.textContent = isDark ? '☀️' : '🌙';
+}
+
+function loadTheme() {
+    const theme = localStorage.getItem('horileo_theme');
+    const btn = document.getElementById('theme-toggle');
+    if (theme === 'dark') {
+        document.body.classList.add('dark-theme');
+        if (btn) btn.textContent = '☀️';
+    } else {
+        document.body.classList.remove('dark-theme');
+        if (btn) btn.textContent = '🌙';
+    }
+}
+
+// Назначаем обработчик после загрузки DOM
+document.addEventListener('DOMContentLoaded', function() {
+    const themeBtn = document.getElementById('theme-toggle');
+    if (themeBtn) {
+        themeBtn.addEventListener('click', toggleTheme);
+    }
+    loadTheme();
+});
