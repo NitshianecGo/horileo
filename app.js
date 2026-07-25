@@ -503,15 +503,45 @@ function grammarPrev() {
 }
 
 // ----- Общая озвучка -----
+// ----- Озвучка с выбором женского голоса -----
 function playAudio(text) {
-    if (!window.speechSynthesis) return;
+    if (!window.speechSynthesis) {
+        alert('Ваш браузер не поддерживает синтез речи.');
+        return;
+    }
     window.speechSynthesis.cancel();
+
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'ko-KR';
     utterance.rate = parseFloat(localStorage.getItem('horileo_speed')) || 0.9;
+    utterance.pitch = 1.0; // стандартная высота
+
+    // Получаем список голосов
     const voices = window.speechSynthesis.getVoices();
-    const koreanVoice = voices.find(v => v.lang.startsWith('ko'));
-    if (koreanVoice) utterance.voice = koreanVoice;
+    // Ищем корейский женский голос (приоритет)
+    let selectedVoice = null;
+    // Сначала ищем явно женский (содержит 'female' или 'Google' или '여성')
+    for (const v of voices) {
+        if (v.lang.startsWith('ko')) {
+            const name = v.name.toLowerCase();
+            // Отдаём предпочтение голосам с пометкой female, Google (обычно женский), или содержащим '여성'
+            if (name.includes('female') || name.includes('google') || name.includes('여성')) {
+                selectedVoice = v;
+                break;
+            }
+        }
+    }
+    // Если не нашли, берём первый корейский
+    if (!selectedVoice) {
+        selectedVoice = voices.find(v => v.lang.startsWith('ko'));
+    }
+    if (selectedVoice) {
+        utterance.voice = selectedVoice;
+        console.log('Выбран голос:', selectedVoice.name);
+    } else {
+        console.warn('Корейский голос не найден, используется стандартный.');
+    }
+
     window.speechSynthesis.speak(utterance);
 }
 
