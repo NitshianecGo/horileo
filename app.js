@@ -1,4 +1,4 @@
-// app.js – вся логика приложения (исправлено: добавлены кейсы для reading, audio, grammar)
+// app.js – полная логика, включая раздел "План" с начальным обучением
 
 let currentLevelId = 'topik1';
 let currentTab = 'home';
@@ -7,6 +7,7 @@ let currentGrammarExerciseIndex = 0;
 let readingItems = [];
 let audioItems = [];
 let grammarItems = [];
+let beginnerSteps = [];
 let userProgress = {};
 
 const mainEl = document.getElementById('app-main');
@@ -31,7 +32,8 @@ function loadProgress() {
         learnedWords: {},
         readingProgress: {},
         audioProgress: {},
-        grammarProgress: {}
+        grammarProgress: {},
+        beginnerStep: 0 // для начального плана
     };
 }
 
@@ -48,7 +50,7 @@ function updateCoinDisplay() {
 loadProgress();
 navigateTo('home');
 
-// ----- Навигация по вкладкам (ИСПРАВЛЕНО: добавлены reading, audio, grammar) -----
+// ----- Навигация по вкладкам -----
 function navigateTo(tab) {
     currentTab = tab;
     navBtns.forEach(btn => btn.classList.remove('active'));
@@ -56,7 +58,7 @@ function navigateTo(tab) {
     if (activeBtn) activeBtn.classList.add('active');
     switch(tab) {
         case 'home': renderHome(); break;
-        case 'plan': renderLevelSelection(); break;
+        case 'plan': renderPlan(); break;
         case 'dictionary': renderDictionary(); break;
         case 'profile': renderProfile(); break;
         case 'reading': renderReading(); break;
@@ -117,9 +119,23 @@ function continueLearning() {
     selectLevel(levelId);
 }
 
-// ----- План -----
-function renderLevelSelection() {
-    let html = `<h2>📚 Выберите уровень</h2>`;
+// ----- План (начальный + уровни) -----
+function renderPlan() {
+    let html = `<h2>📚 План обучения</h2>`;
+    // Начальный план
+    html += `<div class="card"><h3>${BEGINNER_PLAN.title}</h3>`;
+    BEGINNER_PLAN.steps.forEach((step, idx) => {
+        const done = userProgress.beginnerStep > idx;
+        html += `
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border);">
+                <span>${idx+1}. ${step.title}</span>
+                <span>${done ? '✅' : '⬜'}</span>
+            </div>
+        `;
+    });
+    html += `<button class="btn-secondary" onclick="startBeginner()" style="margin-top:12px;">Начать начальный курс</button></div>`;
+
+    // Уровни TOPIK
     LEVELS.forEach(l => {
         html += `
             <div class="card" onclick="selectLevel('${l.id}')" style="cursor:pointer;">
@@ -131,6 +147,46 @@ function renderLevelSelection() {
     mainEl.innerHTML = html;
 }
 
+function startBeginner() {
+    // Переходим к первому шагу
+    userProgress.beginnerStep = 0;
+    saveProgress();
+    showBeginnerStep();
+}
+
+function showBeginnerStep() {
+    const stepIndex = userProgress.beginnerStep || 0;
+    const steps = BEGINNER_PLAN.steps;
+    if (stepIndex >= steps.length) {
+        alert('🎉 Поздравляем! Вы завершили начальный курс!');
+        renderPlan();
+        return;
+    }
+    const step = steps[stepIndex];
+    const total = steps.length;
+    const html = `
+        <div class="card">
+            <h2>📘 Начальный этап</h2>
+            <p>Шаг ${stepIndex+1} из ${total}</p>
+            <h3>${step.title}</h3>
+            <p>${step.description}</p>
+            <div style="margin-top:16px;">
+                <button class="btn-primary" onclick="beginnerComplete()">✅ Пройдено</button>
+                <button class="btn-secondary" onclick="navigateTo('plan')">Назад к плану</button>
+            </div>
+        </div>
+    `;
+    mainEl.innerHTML = html;
+}
+
+function beginnerComplete() {
+    userProgress.beginnerStep = (userProgress.beginnerStep || 0) + 1;
+    userProgress.coins = (userProgress.coins || 0) + 3;
+    saveProgress();
+    showBeginnerStep();
+}
+
+// ----- План уровня (список разделов) -----
 function renderLevelPlan(levelId) {
     const level = LEVELS.find(l => l.id === levelId);
     if (!level) return;
@@ -144,6 +200,7 @@ function renderLevelPlan(levelId) {
                 <div class="card" onclick="openGrammarSection()">📝 Грамматика (${level.grammar.length} правил)</div>
             </div>
         </div>
+        <button class="btn-secondary" onclick="navigateTo('plan')">Назад к плану</button>
     `;
     mainEl.innerHTML = html;
 }
@@ -161,7 +218,7 @@ function openReadingSection() {
 
 function renderReading() {
     if (!readingItems || readingItems.length === 0) {
-        mainEl.innerHTML = `<div class="card"><h2>Нет предложений для чтения</h2><button class="btn-primary" onclick="navigateTo('home')">Назад</button></div>`;
+        mainEl.innerHTML = `<div class="card"><h2>Нет предложений</h2><button class="btn-primary" onclick="navigateTo('home')">Назад</button></div>`;
         return;
     }
     const item = readingItems[currentIndex];
@@ -175,6 +232,7 @@ function renderReading() {
             <h2>📖 Чтение (${currentLevelId})</h2>
             <p>Предложение ${currentIndex+1} из ${total}</p>
             <div class="reading-text">${item.korean}</div>
+            <button class="btn-secondary audio-play-btn" onclick="playAudio('${item.korean}')">🔊 Прослушать</button>
             <div id="translation-display" style="display:none; background:#f0f8ff; padding:12px; border-radius:16px; margin:8px 0;">
                 <strong>Перевод:</strong> ${item.russian}
             </div>
@@ -268,7 +326,7 @@ function openAudioSection() {
 
 function renderAudio() {
     if (!audioItems || audioItems.length === 0) {
-        mainEl.innerHTML = `<div class="card"><h2>Нет слов для аудирования</h2><button class="btn-primary" onclick="navigateTo('home')">Назад</button></div>`;
+        mainEl.innerHTML = `<div class="card"><h2>Нет слов</h2><button class="btn-primary" onclick="navigateTo('home')">Назад</button></div>`;
         return;
     }
     const item = audioItems[currentIndex];
@@ -377,7 +435,7 @@ function openGrammarSection() {
 
 function renderGrammar() {
     if (!grammarItems || grammarItems.length === 0) {
-        mainEl.innerHTML = `<div class="card"><h2>Нет грамматических правил</h2><button class="btn-primary" onclick="navigateTo('home')">Назад</button></div>`;
+        mainEl.innerHTML = `<div class="card"><h2>Нет правил</h2><button class="btn-primary" onclick="navigateTo('home')">Назад</button></div>`;
         return;
     }
     const rule = grammarItems[currentIndex];
@@ -538,7 +596,7 @@ function renderDictionary() {
     html += `<p>Всего слов: ${levelWords.length}</p>`;
     html += `<button class="btn-secondary" onclick="startRepetition()">🔁 Повторение карточек</button>`;
     html += `<div id="dict-list">`;
-    levelWords.slice(0, 50).forEach(item => {
+    levelWords.slice(0, 100).forEach(item => {
         const learned = userProgress.learnedWords?.[item.word] || false;
         html += `
             <div class="dict-item">
@@ -674,7 +732,7 @@ function renderProfile() {
 function resetProgress() {
     if (confirm('Вы уверены? Весь прогресс будет удалён.')) {
         localStorage.removeItem('horileo_progress');
-        userProgress = { currentLevel: 'topik1', completedTasks: [], coins: 0, wordsLearned: 0, totalLessons: 0, learnedWords: {}, readingProgress: {}, audioProgress: {}, grammarProgress: {} };
+        userProgress = { currentLevel: 'topik1', completedTasks: [], coins: 0, wordsLearned: 0, totalLessons: 0, learnedWords: {}, readingProgress: {}, audioProgress: {}, grammarProgress: {}, beginnerStep: 0 };
         saveProgress();
         navigateTo('home');
     }
@@ -716,14 +774,12 @@ document.addEventListener('DOMContentLoaded', function() {
     loadTheme();
     loadProgress();
     navigateTo('home');
-    // Подгрузка голосов для Speech Synthesis
     if (window.speechSynthesis) {
         window.speechSynthesis.getVoices();
         window.speechSynthesis.onvoiceschanged = () => {
             window.speechSynthesis.getVoices();
         };
     }
-    // Обработчик кнопки темы
     const themeBtn = document.getElementById('theme-toggle');
     if (themeBtn) themeBtn.addEventListener('click', toggleTheme);
 });
