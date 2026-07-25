@@ -1,4 +1,4 @@
-// app.js – вся логика приложения
+// app.js – вся логика приложения (исправлено: добавлены кейсы для reading, audio, grammar)
 
 let currentLevelId = 'topik1';
 let currentTab = 'home';
@@ -48,16 +48,20 @@ function updateCoinDisplay() {
 loadProgress();
 navigateTo('home');
 
-// ----- Навигация по вкладкам -----
+// ----- Навигация по вкладкам (ИСПРАВЛЕНО: добавлены reading, audio, grammar) -----
 function navigateTo(tab) {
     currentTab = tab;
     navBtns.forEach(btn => btn.classList.remove('active'));
-    document.querySelector(`.nav-btn[data-tab="${tab}"]`).classList.add('active');
+    const activeBtn = document.querySelector(`.nav-btn[data-tab="${tab}"]`);
+    if (activeBtn) activeBtn.classList.add('active');
     switch(tab) {
         case 'home': renderHome(); break;
         case 'plan': renderLevelSelection(); break;
         case 'dictionary': renderDictionary(); break;
         case 'profile': renderProfile(); break;
+        case 'reading': renderReading(); break;
+        case 'audio': renderAudio(); break;
+        case 'grammar': renderGrammar(); break;
         default: renderHome();
     }
 }
@@ -156,8 +160,8 @@ function openReadingSection() {
 }
 
 function renderReading() {
-    if (readingItems.length === 0) {
-        mainEl.innerHTML = `<div class="card"><h2>Нет предложений</h2><button class="btn-primary" onclick="navigateTo('home')">Назад</button></div>`;
+    if (!readingItems || readingItems.length === 0) {
+        mainEl.innerHTML = `<div class="card"><h2>Нет предложений для чтения</h2><button class="btn-primary" onclick="navigateTo('home')">Назад</button></div>`;
         return;
     }
     const item = readingItems[currentIndex];
@@ -263,8 +267,8 @@ function openAudioSection() {
 }
 
 function renderAudio() {
-    if (audioItems.length === 0) {
-        mainEl.innerHTML = `<div class="card"><h2>Нет слов</h2><button class="btn-primary" onclick="navigateTo('home')">Назад</button></div>`;
+    if (!audioItems || audioItems.length === 0) {
+        mainEl.innerHTML = `<div class="card"><h2>Нет слов для аудирования</h2><button class="btn-primary" onclick="navigateTo('home')">Назад</button></div>`;
         return;
     }
     const item = audioItems[currentIndex];
@@ -372,8 +376,8 @@ function openGrammarSection() {
 }
 
 function renderGrammar() {
-    if (grammarItems.length === 0) {
-        mainEl.innerHTML = `<div class="card"><h2>Нет правил</h2><button class="btn-primary" onclick="navigateTo('home')">Назад</button></div>`;
+    if (!grammarItems || grammarItems.length === 0) {
+        mainEl.innerHTML = `<div class="card"><h2>Нет грамматических правил</h2><button class="btn-primary" onclick="navigateTo('home')">Назад</button></div>`;
         return;
     }
     const rule = grammarItems[currentIndex];
@@ -532,6 +536,7 @@ function renderDictionary() {
     const levelWords = WORDS.filter(w => w.levelId === currentLevelId);
     let html = `<h2>📖 Словарь (${currentLevelId})</h2>`;
     html += `<p>Всего слов: ${levelWords.length}</p>`;
+    html += `<button class="btn-secondary" onclick="startRepetition()">🔁 Повторение карточек</button>`;
     html += `<div id="dict-list">`;
     levelWords.slice(0, 50).forEach(item => {
         const learned = userProgress.learnedWords?.[item.word] || false;
