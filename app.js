@@ -1,18 +1,19 @@
-// app.js – локальная версия без регистрации
+// app.js – полная логика
 
 let currentLevelId = 'topik1';
-let currentWeekIndex = 0;
-let currentDayIndex = 0;
-let currentLessonIndex = 0;
-let currentTaskIndex = 0;
-let currentTasks = [];
+let currentTab = 'home'; // home, plan, reading, audio, grammar, dictionary, profile
+let currentIndex = 0; // для чтения, аудио, грамматики
+let currentGrammarExerciseIndex = 0;
+let readingItems = [];
+let audioItems = [];
+let grammarItems = [];
 let userProgress = {};
 
 const mainEl = document.getElementById('app-main');
 const navBtns = document.querySelectorAll('.nav-btn');
 const coinDisplay = document.getElementById('coin-display');
 
-// ----- Загрузка и сохранение прогресса (localStorage) -----
+// ----- Загрузка и сохранение прогресса -----
 function loadProgress() {
     try {
         const data = localStorage.getItem('horileo_progress');
@@ -27,16 +28,15 @@ function loadProgress() {
         coins: 0,
         wordsLearned: 0,
         totalLessons: 0,
-        learnedWords: {} // для словаря: word -> true/false
+        learnedWords: {},
+        readingProgress: {}, // { levelId: { index: 5, completed: [0,1,2] } }
+        audioProgress: {},
+        grammarProgress: {}
     };
 }
 
 function saveProgress() {
     localStorage.setItem('horileo_progress', JSON.stringify(userProgress));
-    // Также синхронизируем словарь
-    const dictData = {};
-    DICTIONARY.forEach(w => { dictData[w.word] = w.learned; });
-    localStorage.setItem('horileo_dictionary', JSON.stringify(dictData));
     updateCoinDisplay();
 }
 
@@ -44,8 +44,13 @@ function updateCoinDisplay() {
     coinDisplay.textContent = '☕ ' + (userProgress.coins || 0);
 }
 
-// ----- Навигация -----
+// ----- Инициализация -----
+loadProgress();
+navigateTo('home');
+
+// ----- Навигация по вкладкам -----
 function navigateTo(tab) {
+    currentTab = tab;
     navBtns.forEach(btn => btn.classList.remove('active'));
     document.querySelector(`.nav-btn[data-tab="${tab}"]`).classList.add('active');
     switch(tab) {
@@ -53,6 +58,10 @@ function navigateTo(tab) {
         case 'plan': renderLevelSelection(); break;
         case 'dictionary': renderDictionary(); break;
         case 'profile': renderProfile(); break;
+        case 'reading': renderReading(); break;
+        case 'audio': renderAudio(); break;
+        case 'grammar': renderGrammar(); break;
+        default: renderHome();
     }
 }
 
@@ -64,7 +73,7 @@ navBtns.forEach(btn => {
 
 // ----- Главная -----
 function renderHome() {
-    const totalTasks = 100; // пример
+    const totalTasks = 100; // условно
     const completed = userProgress.completedTasks ? userProgress.completedTasks.length : 0;
     const pct = Math.min(100, Math.round((completed / totalTasks) * 100));
     let html = `
@@ -87,9 +96,9 @@ function renderHome() {
             </div>
         </div>
         <div class="row">
-            <div class="card" onclick="openReading()">📖 Чтение</div>
-            <div class="card" onclick="openAudio()">🎧 Аудирование</div>
-            <div class="card" onclick="openGrammar()">📝 Грамматика</div>
+            <div class="card" onclick="openReadingSection()">📖 Чтение</div>
+            <div class="card" onclick="openAudioSection()">🎧 Аудирование</div>
+            <div class="card" onclick="openGrammarSection()">📝 Грамматика</div>
         </div>
     `;
     mainEl.innerHTML = html;
@@ -107,7 +116,7 @@ function continueLearning() {
     selectLevel(levelId);
 }
 
-// ----- План уровня -----
+// ----- План (для совместимости, но теперь не используется для уроков) -----
 function renderLevelSelection() {
     let html = `<h2>📚 Выберите уровень</h2>`;
     LEVELS.forEach(l => {
@@ -125,263 +134,375 @@ function renderLevelPlan(levelId) {
     const level = LEVELS.find(l => l.id === levelId);
     if (!level) return;
     let html = `<h2>📚 ${level.title}</h2>`;
-    level.weeks.forEach((week, wIdx) => {
-        html += `<h3>${week.title}</h3>`;
-        week.days.forEach((day, dIdx) => {
-            const isComplete = userProgress.completedTasks && userProgress.completedTasks.includes(day.lessons[0]?.id);
-            html += `
-                <div class="card" style="${isComplete ? 'opacity:0.7;' : ''}">
-                    <h4>${day.title}</h4>
-                    <p>Темы: ${day.topics.join(', ')}</p>
-                    <button class="btn-secondary" onclick="openDay(${wIdx}, ${dIdx}, '${levelId}')">
-                        ${isComplete ? '✅ Пройдено' : 'Начать'}
-                    </button>
-                </div>
-            `;
-        });
-    });
-    mainEl.innerHTML = html;
-}
-
-function openDay(weekIdx, dayIdx, levelId) {
-    const level = LEVELS.find(l => l.id === levelId);
-    if (!level) return;
-    const day = level.weeks[weekIdx].days[dayIdx];
-    currentWeekIndex = weekIdx;
-    currentDayIndex = dayIdx;
-    const lessons = day.lessons;
-    if (lessons.length === 0) {
-        alert('В этом дне пока нет уроков');
-        return;
-    }
-    openLesson(levelId, weekIdx, dayIdx, 0);
-}
-
-function openLesson(levelId, weekIdx, dayIdx, lessonIdx) {
-    const level = LEVELS.find(l => l.id === levelId);
-    if (!level) return;
-    const day = level.weeks[weekIdx].days[dayIdx];
-    const lesson = day.lessons[lessonIdx];
-    if (!lesson) return;
-    currentTasks = lesson.tasks;
-    currentTaskIndex = 0;
-    currentLessonIndex = lessonIdx;
-    renderTask();
-}
-
-function renderTask() {
-    if (currentTaskIndex >= currentTasks.length) {
-        // Урок завершён
-        userProgress.totalLessons = (userProgress.totalLessons || 0) + 1;
-        userProgress.coins = (userProgress.coins || 0) + 5;
-        const taskId = currentTasks[0]?.id || `task_${Date.now()}`;
-        if (!userProgress.completedTasks) userProgress.completedTasks = [];
-        if (!userProgress.completedTasks.includes(taskId)) {
-            userProgress.completedTasks.push(taskId);
-        }
-        saveProgress();
-        mainEl.innerHTML = `
-            <div class="card">
-                <h2>🎉 Урок пройден!</h2>
-                <p>+5 ☕</p>
-                <button class="btn-primary" onclick="renderLevelPlan('${currentLevelId}')">К плану</button>
+    html += `
+        <div class="card">
+            <h3>Разделы курса</h3>
+            <div class="row">
+                <div class="card" onclick="openReadingSection()">📖 Чтение (${level.reading.length} предложений)</div>
+                <div class="card" onclick="openAudioSection()">🎧 Аудирование (${level.audio.length} слов)</div>
+                <div class="card" onclick="openGrammarSection()">📝 Грамматика (${level.grammar.length} правил)</div>
             </div>
-        `;
+        </div>
+    `;
+    mainEl.innerHTML = html;
+}
+
+// ----- Раздел ЧТЕНИЕ -----
+function openReadingSection() {
+    const level = LEVELS.find(l => l.id === currentLevelId);
+    if (!level) return;
+    readingItems = level.reading;
+    // Восстанавливаем прогресс
+    const progress = userProgress.readingProgress?.[currentLevelId] || { index: 0, completed: [] };
+    currentIndex = progress.index || 0;
+    if (currentIndex >= readingItems.length) currentIndex = readingItems.length - 1;
+    navigateTo('reading');
+}
+
+function renderReading() {
+    if (readingItems.length === 0) {
+        mainEl.innerHTML = `<div class="card"><h2>Нет предложений для чтения</h2><button class="btn-primary" onclick="navigateTo('home')">Назад</button></div>`;
         return;
     }
-    const task = currentTasks[currentTaskIndex];
-    let html = `<div class="lesson-container"><h3>Задание ${currentTaskIndex+1}/${currentTasks.length}</h3>`;
-    html += `<div class="question-text">${task.question}</div>`;
+    const item = readingItems[currentIndex];
+    const total = readingItems.length;
+    const progress = userProgress.readingProgress?.[currentLevelId] || { index: 0, completed: [] };
+    const isCompleted = progress.completed && progress.completed.includes(currentIndex);
+    const isSkipped = progress.skipped && progress.skipped.includes(currentIndex);
 
-    switch(task.type) {
-        case 'choose':
-            html += `<div class="option-grid">`;
-            task.options.forEach((opt, i) => {
-                html += `<button class="option-btn" data-opt="${i}" onclick="checkChoose(${i})">${opt}</button>`;
-            });
-            html += `</div>`;
-            html += `<div id="feedback"></div>`;
-            break;
-        case 'order':
-            html += `<div class="drag-area" id="drag-area">`;
-            const shuffled = shuffle([...task.words]);
-            shuffled.forEach(w => {
-                html += `<span class="drag-item" draggable="true">${w}</span>`;
-            });
-            html += `</div>`;
-            html += `<button class="btn-primary" onclick="checkOrder()">Проверить</button>`;
-            html += `<div id="feedback"></div>`;
-            break;
-        case 'fill':
-            html += `<div class="option-grid">`;
-            task.options.forEach((opt, i) => {
-                html += `<button class="option-btn" data-opt="${i}" onclick="checkFill(${i})">${opt}</button>`;
-            });
-            html += `</div>`;
-            html += `<div id="feedback"></div>`;
-            break;
-        case 'audio':
-            html += `<button class="btn-secondary audio-play-btn" onclick="playAudio('${task.audioText}')">🔊 Прослушать</button>`;
-            html += `<div class="option-grid">`;
-            task.options.forEach((opt, i) => {
-                html += `<button class="option-btn" data-opt="${i}" onclick="checkChoose(${i})">${opt}</button>`;
-            });
-            html += `</div>`;
-            html += `<div id="feedback"></div>`;
-            break;
-        case 'write':
-            html += `<input type="text" id="write-input" placeholder="Введите на корейском" style="width:100%;padding:12px;border-radius:16px;border:1px solid #ddd;font-size:1.2rem;">`;
-            html += `<button class="btn-primary" onclick="checkWrite()">Проверить</button>`;
-            html += `<div id="feedback"></div>`;
-            break;
-        default:
-            html += `<p>Неизвестный тип задания</p>`;
-    }
-    html += `</div>`;
+    let html = `
+        <div class="card">
+            <h2>📖 Чтение (${currentLevelId})</h2>
+            <p>Предложение ${currentIndex+1} из ${total}</p>
+            <div class="reading-text">${item.korean}</div>
+            <div id="translation-display" style="display:none; background:#f0f8ff; padding:12px; border-radius:16px; margin:8px 0;">
+                <strong>Перевод:</strong> ${item.russian}
+            </div>
+            <div id="feedback" style="margin:8px 0;"></div>
+            <div class="row" style="justify-content:center; gap:10px;">
+                <button class="btn-secondary" onclick="readingPrev()" ${currentIndex === 0 ? 'disabled' : ''}>⬅ Назад</button>
+                <button class="btn-primary" onclick="readingCheck()">✅ Проверить</button>
+                <button class="btn-secondary" onclick="readingSkip()">⏭ Пропустить</button>
+                <button class="btn-secondary" onclick="readingNext()" ${currentIndex === total-1 ? 'disabled' : ''}>Дальше ➡</button>
+            </div>
+            <div style="margin-top:12px;">
+                <span>Статус: ${isCompleted ? '✅ Пройдено' : isSkipped ? '⏭ Пропущено' : '⬜ Не пройдено'}</span>
+            </div>
+            <br>
+            <button class="btn-primary" onclick="navigateTo('home')">На главную</button>
+        </div>
+    `;
     mainEl.innerHTML = html;
-
-    if (task.type === 'order') {
-        initDragDrop();
-    }
 }
 
-// ----- Проверки заданий -----
-function checkChoose(selected) {
-    const task = currentTasks[currentTaskIndex];
-    const feedback = document.getElementById('feedback');
-    if (selected === task.correct) {
-        feedback.innerHTML = `<span style="color:green;">✅ Правильно!</span>`;
-        markTaskComplete();
-        setTimeout(() => nextTask(), 1200);
+function readingCheck() {
+    const display = document.getElementById('translation-display');
+    if (display) display.style.display = 'block';
+    // Отметить как пройденное, если ещё не отмечено
+    const progress = userProgress.readingProgress?.[currentLevelId] || { index: 0, completed: [], skipped: [] };
+    if (!progress.completed) progress.completed = [];
+    if (!progress.skipped) progress.skipped = [];
+    if (!progress.completed.includes(currentIndex) && !progress.skipped.includes(currentIndex)) {
+        progress.completed.push(currentIndex);
+        userProgress.coins = (userProgress.coins || 0) + 1;
+        if (!userProgress.readingProgress) userProgress.readingProgress = {};
+        userProgress.readingProgress[currentLevelId] = progress;
+        saveProgress();
+        document.getElementById('feedback').innerHTML = '<span style="color:green;">✅ Отлично! +1 ☕</span>';
+        // Обновим статус
+        const statusSpan = document.querySelector('.card > div:last-child span');
+        if (statusSpan) statusSpan.textContent = '✅ Пройдено';
     } else {
-        feedback.innerHTML = `<span style="color:red;">❌ Попробуй ещё</span>`;
+        document.getElementById('feedback').innerHTML = '<span style="color:orange;">⏳ Уже выполнено</span>';
     }
 }
 
-function checkOrder() {
-    const area = document.getElementById('drag-area');
-    const items = area.querySelectorAll('.drag-item');
-    const userOrder = Array.from(items).map(el => el.textContent);
-    const task = currentTasks[currentTaskIndex];
-    const feedback = document.getElementById('feedback');
-    if (userOrder.join('|') === task.correct.join('|')) {
-        feedback.innerHTML = `<span style="color:green;">✅ Правильно!</span>`;
-        markTaskComplete();
-        setTimeout(() => nextTask(), 1200);
+function readingSkip() {
+    const progress = userProgress.readingProgress?.[currentLevelId] || { index: 0, completed: [], skipped: [] };
+    if (!progress.skipped) progress.skipped = [];
+    if (!progress.skipped.includes(currentIndex)) {
+        progress.skipped.push(currentIndex);
+        if (!userProgress.readingProgress) userProgress.readingProgress = {};
+        userProgress.readingProgress[currentLevelId] = progress;
+        saveProgress();
+        document.getElementById('feedback').innerHTML = '<span style="color:orange;">⏭ Пропущено</span>';
+        const statusSpan = document.querySelector('.card > div:last-child span');
+        if (statusSpan) statusSpan.textContent = '⏭ Пропущено';
     } else {
-        feedback.innerHTML = `<span style="color:red;">❌ Неверный порядок.</span>`;
+        document.getElementById('feedback').innerHTML = '<span style="color:orange;">⏳ Уже пропущено</span>';
     }
 }
 
-function checkFill(selected) {
-    checkChoose(selected);
+function readingNext() {
+    if (currentIndex < readingItems.length - 1) {
+        currentIndex++;
+        const progress = userProgress.readingProgress?.[currentLevelId] || { index: 0, completed: [], skipped: [] };
+        progress.index = currentIndex;
+        if (!userProgress.readingProgress) userProgress.readingProgress = {};
+        userProgress.readingProgress[currentLevelId] = progress;
+        saveProgress();
+        renderReading();
+    }
 }
 
-function checkWrite() {
-    const input = document.getElementById('write-input');
-    const userAnswer = input.value.trim();
-    const task = currentTasks[currentTaskIndex];
-    const feedback = document.getElementById('feedback');
-    const expected = task.audioText || task.options?.[0] || '';
-    if (userAnswer.includes(expected) || expected.includes(userAnswer)) {
-        feedback.innerHTML = `<span style="color:green;">✅ Принято!</span>`;
-        markTaskComplete();
-        setTimeout(() => nextTask(), 1200);
+function readingPrev() {
+    if (currentIndex > 0) {
+        currentIndex--;
+        const progress = userProgress.readingProgress?.[currentLevelId] || { index: 0, completed: [], skipped: [] };
+        progress.index = currentIndex;
+        if (!userProgress.readingProgress) userProgress.readingProgress = {};
+        userProgress.readingProgress[currentLevelId] = progress;
+        saveProgress();
+        renderReading();
+    }
+}
+
+// ----- Раздел АУДИРОВАНИЕ (аналогично чтению) -----
+function openAudioSection() {
+    const level = LEVELS.find(l => l.id === currentLevelId);
+    if (!level) return;
+    audioItems = level.audio;
+    const progress = userProgress.audioProgress?.[currentLevelId] || { index: 0, completed: [] };
+    currentIndex = progress.index || 0;
+    if (currentIndex >= audioItems.length) currentIndex = audioItems.length - 1;
+    navigateTo('audio');
+}
+
+function renderAudio() {
+    if (audioItems.length === 0) {
+        mainEl.innerHTML = `<div class="card"><h2>Нет слов для аудирования</h2><button class="btn-primary" onclick="navigateTo('home')">Назад</button></div>`;
+        return;
+    }
+    const item = audioItems[currentIndex];
+    const total = audioItems.length;
+    const progress = userProgress.audioProgress?.[currentLevelId] || { index: 0, completed: [] };
+    const isCompleted = progress.completed && progress.completed.includes(currentIndex);
+    const isSkipped = progress.skipped && progress.skipped.includes(currentIndex);
+
+    let html = `
+        <div class="card">
+            <h2>🎧 Аудирование (${currentLevelId})</h2>
+            <p>Слово ${currentIndex+1} из ${total}</p>
+            <div style="font-size:2rem; margin:12px 0;">🔊</div>
+            <button class="btn-secondary audio-play-btn" onclick="playAudio('${item.korean}')">▶ Прослушать</button>
+            <div id="translation-display" style="display:none; background:#f0f8ff; padding:12px; border-radius:16px; margin:8px 0;">
+                <strong>Перевод:</strong> ${item.russian}
+            </div>
+            <div id="feedback" style="margin:8px 0;"></div>
+            <div class="row" style="justify-content:center; gap:10px;">
+                <button class="btn-secondary" onclick="audioPrev()" ${currentIndex === 0 ? 'disabled' : ''}>⬅ Назад</button>
+                <button class="btn-primary" onclick="audioCheck()">✅ Проверить</button>
+                <button class="btn-secondary" onclick="audioSkip()">⏭ Пропустить</button>
+                <button class="btn-secondary" onclick="audioNext()" ${currentIndex === total-1 ? 'disabled' : ''}>Дальше ➡</button>
+            </div>
+            <div style="margin-top:12px;">
+                <span>Статус: ${isCompleted ? '✅ Пройдено' : isSkipped ? '⏭ Пропущено' : '⬜ Не пройдено'}</span>
+            </div>
+            <br>
+            <button class="btn-primary" onclick="navigateTo('home')">На главную</button>
+        </div>
+    `;
+    mainEl.innerHTML = html;
+}
+
+function audioCheck() {
+    const display = document.getElementById('translation-display');
+    if (display) display.style.display = 'block';
+    const progress = userProgress.audioProgress?.[currentLevelId] || { index: 0, completed: [], skipped: [] };
+    if (!progress.completed) progress.completed = [];
+    if (!progress.skipped) progress.skipped = [];
+    if (!progress.completed.includes(currentIndex) && !progress.skipped.includes(currentIndex)) {
+        progress.completed.push(currentIndex);
+        userProgress.coins = (userProgress.coins || 0) + 1;
+        if (!userProgress.audioProgress) userProgress.audioProgress = {};
+        userProgress.audioProgress[currentLevelId] = progress;
+        saveProgress();
+        document.getElementById('feedback').innerHTML = '<span style="color:green;">✅ Отлично! +1 ☕</span>';
+        const statusSpan = document.querySelector('.card > div:last-child span');
+        if (statusSpan) statusSpan.textContent = '✅ Пройдено';
     } else {
-        feedback.innerHTML = `<span style="color:red;">❌ Попробуйте ещё раз. Подсказка: ${expected}</span>`;
+        document.getElementById('feedback').innerHTML = '<span style="color:orange;">⏳ Уже выполнено</span>';
     }
 }
 
-function markTaskComplete() {
-    const task = currentTasks[currentTaskIndex];
-    if (!userProgress.completedTasks) userProgress.completedTasks = [];
-    if (!userProgress.completedTasks.includes(task.id)) {
-        userProgress.completedTasks.push(task.id);
-        if (task.word) {
-            const dictWord = DICTIONARY.find(w => w.word === task.word);
-            if (dictWord) dictWord.learned = true;
-        }
+function audioSkip() {
+    const progress = userProgress.audioProgress?.[currentLevelId] || { index: 0, completed: [], skipped: [] };
+    if (!progress.skipped) progress.skipped = [];
+    if (!progress.skipped.includes(currentIndex)) {
+        progress.skipped.push(currentIndex);
+        if (!userProgress.audioProgress) userProgress.audioProgress = {};
+        userProgress.audioProgress[currentLevelId] = progress;
+        saveProgress();
+        document.getElementById('feedback').innerHTML = '<span style="color:orange;">⏭ Пропущено</span>';
+        const statusSpan = document.querySelector('.card > div:last-child span');
+        if (statusSpan) statusSpan.textContent = '⏭ Пропущено';
+    } else {
+        document.getElementById('feedback').innerHTML = '<span style="color:orange;">⏳ Уже пропущено</span>';
+    }
+}
+
+function audioNext() {
+    if (currentIndex < audioItems.length - 1) {
+        currentIndex++;
+        const progress = userProgress.audioProgress?.[currentLevelId] || { index: 0, completed: [], skipped: [] };
+        progress.index = currentIndex;
+        if (!userProgress.audioProgress) userProgress.audioProgress = {};
+        userProgress.audioProgress[currentLevelId] = progress;
+        saveProgress();
+        renderAudio();
+    }
+}
+
+function audioPrev() {
+    if (currentIndex > 0) {
+        currentIndex--;
+        const progress = userProgress.audioProgress?.[currentLevelId] || { index: 0, completed: [], skipped: [] };
+        progress.index = currentIndex;
+        if (!userProgress.audioProgress) userProgress.audioProgress = {};
+        userProgress.audioProgress[currentLevelId] = progress;
+        saveProgress();
+        renderAudio();
+    }
+}
+
+// ----- Раздел ГРАММАТИКА (правила с упражнениями) -----
+function openGrammarSection() {
+    const level = LEVELS.find(l => l.id === currentLevelId);
+    if (!level) return;
+    grammarItems = level.grammar;
+    const progress = userProgress.grammarProgress?.[currentLevelId] || { ruleIndex: 0, exerciseIndex: 0, completed: [] };
+    currentIndex = progress.ruleIndex || 0;
+    currentGrammarExerciseIndex = progress.exerciseIndex || 0;
+    if (currentIndex >= grammarItems.length) currentIndex = grammarItems.length - 1;
+    navigateTo('grammar');
+}
+
+function renderGrammar() {
+    if (grammarItems.length === 0) {
+        mainEl.innerHTML = `<div class="card"><h2>Нет грамматических правил</h2><button class="btn-primary" onclick="navigateTo('home')">Назад</button></div>`;
+        return;
+    }
+    const rule = grammarItems[currentIndex];
+    const total = grammarItems.length;
+    const progress = userProgress.grammarProgress?.[currentLevelId] || { ruleIndex: 0, exerciseIndex: 0, completed: [] };
+    const isCompleted = progress.completed && progress.completed.includes(currentIndex);
+
+    // Показываем правило и упражнения (для простоты покажем первое упражнение)
+    const exercise = rule.exercises && rule.exercises.length > 0 ? rule.exercises[0] : null;
+
+    let html = `
+        <div class="card">
+            <h2>📝 Грамматика (${currentLevelId})</h2>
+            <p>Правило ${currentIndex+1} из ${total}</p>
+            <h3>${rule.title}</h3>
+            <p>${rule.description}</p>
+            <div style="background:#f0f0f0; padding:12px; border-radius:16px; margin:8px 0;">
+                <strong>Примеры:</strong>
+                <ul>
+                    ${rule.examples.map(ex => `<li>${ex}</li>`).join('')}
+                </ul>
+            </div>
+            ${exercise ? `
+                <div style="margin-top:16px;">
+                    <h4>Упражнение:</h4>
+                    <p>${exercise.question}</p>
+                    <input type="text" id="grammar-answer" placeholder="Введите ответ" style="width:100%; padding:10px; border-radius:16px; border:1px solid #ddd; margin:8px 0;">
+                    <button class="btn-primary" onclick="checkGrammarAnswer('${exercise.correct}')">Проверить</button>
+                    <div id="grammar-feedback" style="margin:8px 0;"></div>
+                </div>
+            ` : `<p>Нет упражнений для этого правила.</p>`}
+            <div id="feedback" style="margin:8px 0;"></div>
+            <div class="row" style="justify-content:center; gap:10px;">
+                <button class="btn-secondary" onclick="grammarPrev()" ${currentIndex === 0 ? 'disabled' : ''}>⬅ Назад</button>
+                <button class="btn-primary" onclick="grammarComplete()">✅ Завершить правило</button>
+                <button class="btn-secondary" onclick="grammarSkip()">⏭ Пропустить</button>
+                <button class="btn-secondary" onclick="grammarNext()" ${currentIndex === total-1 ? 'disabled' : ''}>Дальше ➡</button>
+            </div>
+            <div style="margin-top:12px;">
+                <span>Статус: ${isCompleted ? '✅ Пройдено' : '⬜ Не пройдено'}</span>
+            </div>
+            <br>
+            <button class="btn-primary" onclick="navigateTo('home')">На главную</button>
+        </div>
+    `;
+    mainEl.innerHTML = html;
+}
+
+function checkGrammarAnswer(correct) {
+    const input = document.getElementById('grammar-answer');
+    const fb = document.getElementById('grammar-feedback');
+    if (!input) return;
+    const answer = input.value.trim();
+    if (answer === correct) {
+        fb.innerHTML = '<span style="color:green;">✅ Правильно!</span>';
+        // Можно дать монетку
         userProgress.coins = (userProgress.coins || 0) + 1;
         saveProgress();
+    } else {
+        fb.innerHTML = `<span style="color:red;">❌ Неверно. Правильный ответ: ${correct}</span>`;
     }
 }
 
-function nextTask() {
-    currentTaskIndex++;
-    saveProgress();
-    renderTask();
-}
-
-// ----- Вспомогательные функции -----
-function shuffle(arr) {
-    for (let i = arr.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [arr[i], arr[j]] = [arr[j], arr[i]];
+function grammarComplete() {
+    const progress = userProgress.grammarProgress?.[currentLevelId] || { ruleIndex: 0, exerciseIndex: 0, completed: [] };
+    if (!progress.completed) progress.completed = [];
+    if (!progress.completed.includes(currentIndex)) {
+        progress.completed.push(currentIndex);
+        userProgress.coins = (userProgress.coins || 0) + 2;
+        if (!userProgress.grammarProgress) userProgress.grammarProgress = {};
+        userProgress.grammarProgress[currentLevelId] = progress;
+        saveProgress();
+        document.getElementById('feedback').innerHTML = '<span style="color:green;">✅ Правило изучено! +2 ☕</span>';
+        const statusSpan = document.querySelector('.card > div:last-child span');
+        if (statusSpan) statusSpan.textContent = '✅ Пройдено';
+    } else {
+        document.getElementById('feedback').innerHTML = '<span style="color:orange;">⏳ Уже выполнено</span>';
     }
-    return arr;
 }
 
-// ----- Drag and Drop -----
-function initDragDrop() {
-    const area = document.getElementById('drag-area');
-    if (!area) return;
-    let draggedItem = null;
-    area.addEventListener('dragstart', (e) => {
-        draggedItem = e.target;
-        e.target.style.opacity = '0.5';
-    });
-    area.addEventListener('dragend', (e) => {
-        e.target.style.opacity = '1';
-    });
-    area.addEventListener('dragover', (e) => e.preventDefault());
-    area.addEventListener('drop', (e) => {
-        e.preventDefault();
-        if (draggedItem && draggedItem !== e.target) {
-            const items = Array.from(area.children);
-            const fromIdx = items.indexOf(draggedItem);
-            const toIdx = items.indexOf(e.target);
-            if (fromIdx < toIdx) {
-                area.insertBefore(draggedItem, e.target.nextSibling);
-            } else {
-                area.insertBefore(draggedItem, e.target);
-            }
-        }
-    });
-    // Touch
-    let touchDrag = null;
-    area.addEventListener('touchstart', (e) => {
-        const touch = e.touches[0];
-        const target = document.elementFromPoint(touch.clientX, touch.clientY);
-        if (target && target.classList.contains('drag-item')) {
-            touchDrag = target;
-            target.style.opacity = '0.5';
-        }
-    }, { passive: true });
-    area.addEventListener('touchmove', (e) => {
-        e.preventDefault();
-        if (!touchDrag) return;
-        const touch = e.touches[0];
-        const target = document.elementFromPoint(touch.clientX, touch.clientY);
-        if (target && target.classList.contains('drag-item') && target !== touchDrag) {
-            const items = Array.from(area.children);
-            const fromIdx = items.indexOf(touchDrag);
-            const toIdx = items.indexOf(target);
-            if (fromIdx < toIdx) {
-                area.insertBefore(touchDrag, target.nextSibling);
-            } else {
-                area.insertBefore(touchDrag, target);
-            }
-        }
-    }, { passive: false });
-    area.addEventListener('touchend', () => {
-        if (touchDrag) {
-            touchDrag.style.opacity = '1';
-            touchDrag = null;
-        }
-    });
+function grammarSkip() {
+    const progress = userProgress.grammarProgress?.[currentLevelId] || { ruleIndex: 0, exerciseIndex: 0, completed: [], skipped: [] };
+    if (!progress.skipped) progress.skipped = [];
+    if (!progress.skipped.includes(currentIndex)) {
+        progress.skipped.push(currentIndex);
+        if (!userProgress.grammarProgress) userProgress.grammarProgress = {};
+        userProgress.grammarProgress[currentLevelId] = progress;
+        saveProgress();
+        document.getElementById('feedback').innerHTML = '<span style="color:orange;">⏭ Пропущено</span>';
+        const statusSpan = document.querySelector('.card > div:last-child span');
+        if (statusSpan) statusSpan.textContent = '⏭ Пропущено';
+    } else {
+        document.getElementById('feedback').innerHTML = '<span style="color:orange;">⏳ Уже пропущено</span>';
+    }
 }
 
-// ----- Озвучка (с поддержкой iOS) -----
+function grammarNext() {
+    if (currentIndex < grammarItems.length - 1) {
+        currentIndex++;
+        const progress = userProgress.grammarProgress?.[currentLevelId] || { ruleIndex: 0, exerciseIndex: 0, completed: [], skipped: [] };
+        progress.ruleIndex = currentIndex;
+        progress.exerciseIndex = 0;
+        if (!userProgress.grammarProgress) userProgress.grammarProgress = {};
+        userProgress.grammarProgress[currentLevelId] = progress;
+        saveProgress();
+        renderGrammar();
+    }
+}
+
+function grammarPrev() {
+    if (currentIndex > 0) {
+        currentIndex--;
+        const progress = userProgress.grammarProgress?.[currentLevelId] || { ruleIndex: 0, exerciseIndex: 0, completed: [], skipped: [] };
+        progress.ruleIndex = currentIndex;
+        progress.exerciseIndex = 0;
+        if (!userProgress.grammarProgress) userProgress.grammarProgress = {};
+        userProgress.grammarProgress[currentLevelId] = progress;
+        saveProgress();
+        renderGrammar();
+    }
+}
+
+// ----- Общая озвучка -----
 function playAudio(text) {
     if (!window.speechSynthesis) return;
     window.speechSynthesis.cancel();
@@ -394,120 +515,14 @@ function playAudio(text) {
     window.speechSynthesis.speak(utterance);
 }
 
-// ----- Чтение, Аудирование, Грамматика, Письмо (упрощённо) -----
-function openReading() {
-    const sampleText = '안녕하세요. 저는 호리입니다. 오늘은 날씨가 좋아요.';
-    mainEl.innerHTML = `
-        <div class="card">
-            <h2>📖 Чтение</h2>
-            <div class="reading-text">${sampleText}</div>
-            <button class="btn-secondary audio-play-btn" onclick="playAudio('${sampleText}')">🔊 Воспроизвести текст</button>
-            <button class="btn-primary" onclick="navigateTo('home')">Назад</button>
-        </div>
-    `;
-}
-
-function openAudio() {
-    const phrases = ['안녕하세요', '감사합니다', '죄송합니다'];
-    const randomPhrase = phrases[Math.floor(Math.random() * phrases.length)];
-    const correctTrans = DICTIONARY.find(w => w.word === randomPhrase)?.translation || 'Привет';
-    const options = shuffle([correctTrans, 'Пока', 'Спасибо', 'Извините']);
-    mainEl.innerHTML = `
-        <div class="card">
-            <h2>🎧 Аудирование</h2>
-            <p>Прослушай фразу и выбери правильный перевод</p>
-            <button class="btn-secondary audio-play-btn" onclick="playAudio('${randomPhrase}')">🔊 Прослушать</button>
-            <div class="option-grid">
-                ${options.map((opt, i) => `
-                    <button class="option-btn" onclick="checkAudioAnswer('${opt}', '${correctTrans}')">${opt}</button>
-                `).join('')}
-            </div>
-            <div id="audio-feedback"></div>
-            <button class="btn-primary" onclick="navigateTo('home')">Назад</button>
-        </div>
-    `;
-    window.checkAudioAnswer = function(selected, correct) {
-        const fb = document.getElementById('audio-feedback');
-        if (selected === correct) {
-            fb.innerHTML = '<span style="color:green;">✅ Правильно!</span>';
-            userProgress.coins = (userProgress.coins || 0) + 2;
-            saveProgress();
-        } else {
-            fb.innerHTML = `<span style="color:red;">❌ Неверно. Правильно: ${correct}</span>`;
-        }
-    };
-}
-
-function openGrammar() {
-    mainEl.innerHTML = `
-        <div class="card">
-            <h2>📝 Грамматика</h2>
-            <p>Выбери правильную частицу: <strong>학교___ 가요.</strong></p>
-            <div class="option-grid">
-                <button class="option-btn" onclick="alert('✅ Правильно!')">에</button>
-                <button class="option-btn" onclick="alert('❌ Неверно')">에서</button>
-                <button class="option-btn" onclick="alert('❌ Неверно')">을</button>
-            </div>
-            <button class="btn-primary" onclick="navigateTo('home')">Назад</button>
-        </div>
-    `;
-}
-
-function openWriting() {
-    mainEl.innerHTML = `
-        <div class="card">
-            <h2>✍️ Письмо от руки</h2>
-            <p>Нарисуй слог <strong>가</strong> на холсте</p>
-            <div class="canvas-wrapper">
-                <canvas id="writing-canvas" width="300" height="300"></canvas>
-            </div>
-            <button class="btn-secondary" onclick="clearCanvas()">Очистить</button>
-            <button class="btn-primary" onclick="navigateTo('home')">Готово</button>
-        </div>
-    `;
-    setTimeout(() => {
-        const canvas = document.getElementById('writing-canvas');
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-        let isDrawing = false;
-        canvas.addEventListener('mousedown', (e) => { isDrawing = true; draw(e); });
-        canvas.addEventListener('mousemove', (e) => { if (isDrawing) draw(e); });
-        canvas.addEventListener('mouseup', () => { isDrawing = false; });
-        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); isDrawing = true; drawTouch(e); });
-        canvas.addEventListener('touchmove', (e) => { e.preventDefault(); if (isDrawing) drawTouch(e); });
-        canvas.addEventListener('touchend', () => { isDrawing = false; });
-        function draw(e) {
-            const rect = canvas.getBoundingClientRect();
-            const x = (e.clientX - rect.left) * (canvas.width / rect.width);
-            const y = (e.clientY - rect.top) * (canvas.height / rect.height);
-            ctx.fillStyle = '#333';
-            ctx.beginPath();
-            ctx.arc(x, y, 6, 0, Math.PI*2);
-            ctx.fill();
-        }
-        function drawTouch(e) {
-            const touch = e.touches[0];
-            const rect = canvas.getBoundingClientRect();
-            const x = (touch.clientX - rect.left) * (canvas.width / rect.width);
-            const y = (touch.clientY - rect.top) * (canvas.height / rect.height);
-            ctx.fillStyle = '#333';
-            ctx.beginPath();
-            ctx.arc(x, y, 6, 0, Math.PI*2);
-            ctx.fill();
-        }
-        window.clearCanvas = function() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-        };
-    }, 100);
-}
-
-// ----- Словарь и карточки -----
+// ----- Словарь (упрощённо) -----
 function renderDictionary() {
-    let html = `<h2>📖 Мой Ханбок (словарь)</h2>`;
-    html += `<button class="btn-secondary" onclick="startRepetition()">🔁 Повторение карточек</button>`;
+    // Показываем слова, связанные с текущим уровнем
+    const levelDict = DICTIONARY.filter(w => w.levelId === currentLevelId);
+    let html = `<h2>📖 Словарь (${currentLevelId})</h2>`;
+    html += `<p>Всего слов: ${levelDict.length}</p>`;
     html += `<div id="dict-list">`;
-    const shown = DICTIONARY.slice(0, 50);
-    shown.forEach(item => {
+    levelDict.slice(0, 50).forEach(item => {
         const learned = userProgress.learnedWords?.[item.word] || false;
         html += `
             <div class="dict-item">
@@ -518,95 +533,8 @@ function renderDictionary() {
             </div>
         `;
     });
-    html += `<p><em>Всего слов: ${DICTIONARY.length}</em></p>`;
     html += `</div>`;
     mainEl.innerHTML = html;
-}
-
-let repetitionQueue = [];
-let currentRepIndex = 0;
-let repetitionMode = 'ko->ru';
-
-function startRepetition() {
-    const unlearned = DICTIONARY.filter(w => !(userProgress.learnedWords?.[w.word]));
-    let pool = unlearned.length > 0 ? unlearned : DICTIONARY.slice();
-    repetitionQueue = shuffle(pool).slice(0, 20);
-    currentRepIndex = 0;
-    const mode = confirm('Повторять с корейского на русский? (OK – корейский→русский, Отмена – русский→корейский)');
-    repetitionMode = mode ? 'ko->ru' : 'ru->ko';
-    showRepetitionCard();
-}
-
-function showRepetitionCard() {
-    if (currentRepIndex >= repetitionQueue.length) {
-        alert('🎉 Сессия повторения завершена.');
-        renderDictionary();
-        return;
-    }
-    const word = repetitionQueue[currentRepIndex];
-    const isKoToRu = repetitionMode === 'ko->ru';
-    const displayText = isKoToRu ? word.word : word.translation;
-    const expectedAnswer = isKoToRu ? word.translation : word.word;
-    const modal = document.createElement('div');
-    modal.className = 'modal-overlay show';
-    modal.id = 'rep-modal';
-    modal.innerHTML = `
-        <div class="modal-content">
-            <h2>🔁 Повторение (${currentRepIndex+1}/${repetitionQueue.length})</h2>
-            <div class="word-display">${displayText}</div>
-            <button class="btn-secondary audio-play-btn" onclick="playAudio('${word.word}')">🔊 Прослушать</button>
-            <input type="text" id="rep-answer" placeholder="Введите перевод" autofocus>
-            <div id="rep-feedback"></div>
-            <div class="modal-buttons">
-                <button class="btn-dontknow" onclick="dontKnow()">😕 Я не знаю</button>
-                <button class="btn-check" onclick="checkRepetition('${expectedAnswer}')">✅ Проверить</button>
-                <button class="btn-next" onclick="nextRepetition()">➡️ Продолжить</button>
-                <button class="btn-close" onclick="closeRepetition()">❌ Закрыть</button>
-            </div>
-        </div>
-    `;
-    document.body.appendChild(modal);
-    setTimeout(() => document.getElementById('rep-answer')?.focus(), 100);
-}
-
-function checkRepetition(expected) {
-    const input = document.getElementById('rep-answer');
-    const userAnswer = input.value.trim();
-    const feedback = document.getElementById('rep-feedback');
-    if (userAnswer.toLowerCase() === expected.toLowerCase()) {
-        feedback.innerHTML = `<span style="color:green;">✅ Правильно!</span>`;
-        const word = repetitionQueue[currentRepIndex];
-        if (!userProgress.learnedWords) userProgress.learnedWords = {};
-        userProgress.learnedWords[word.word] = true;
-        userProgress.wordsLearned = (userProgress.wordsLearned || 0) + 1;
-        saveProgress();
-        setTimeout(() => nextRepetition(), 1200);
-    } else {
-        feedback.innerHTML = `<span style="color:red;">❌ Неверно. Правильно: ${expected}</span>`;
-    }
-}
-
-function dontKnow() {
-    const feedback = document.getElementById('rep-feedback');
-    const word = repetitionQueue[currentRepIndex];
-    const expected = repetitionMode === 'ko->ru' ? word.translation : word.word;
-    feedback.innerHTML = `<span style="color:orange;">😕 Правильный ответ: ${expected}</span>`;
-}
-
-function nextRepetition() {
-    currentRepIndex++;
-    closeRepetition();
-    if (currentRepIndex < repetitionQueue.length) {
-        showRepetitionCard();
-    } else {
-        alert('🎉 Сессия завершена!');
-        renderDictionary();
-    }
-}
-
-function closeRepetition() {
-    const modal = document.getElementById('rep-modal');
-    if (modal) modal.remove();
 }
 
 // ----- Профиль -----
@@ -615,10 +543,9 @@ function renderProfile() {
     const learnedWords = Object.keys(userProgress.learnedWords || {}).length;
     const completedLessons = userProgress.totalLessons || 0;
     const coins = userProgress.coins || 0;
-    let level = 'TOPIK 1 (начальный)';
-    if (completedLessons > 10) level = 'TOPIK 1 (средний)';
-    if (completedLessons > 20) level = 'TOPIK 2 (продвинутый)';
-    if (completedLessons > 30) level = 'TOPIK 3 (эксперт)';
+    let level = 'TOPIK 1';
+    if (completedLessons > 10) level = 'TOPIK 2';
+    if (completedLessons > 30) level = 'TOPIK 3';
     const html = `
         <div class="card">
             <h2>👤 Мой прогресс</h2>
@@ -643,19 +570,13 @@ function renderProfile() {
 function resetProgress() {
     if (confirm('Вы уверены? Весь прогресс будет удалён.')) {
         localStorage.removeItem('horileo_progress');
-        localStorage.removeItem('horileo_dictionary');
-        userProgress = { currentLevel: 'topik1', completedTasks: [], coins: 0, wordsLearned: 0, totalLessons: 0, learnedWords: {} };
-        DICTIONARY.forEach(w => w.learned = false);
+        userProgress = { currentLevel: 'topik1', completedTasks: [], coins: 0, wordsLearned: 0, totalLessons: 0, learnedWords: {}, readingProgress: {}, audioProgress: {}, grammarProgress: {} };
         saveProgress();
         navigateTo('home');
     }
 }
 
-// ----- Инициализация -----
-loadProgress();
-navigateTo('home');
-
-// Активация speech для iOS
+// Инициализация Speech Synthesis для iOS
 document.addEventListener('touchstart', () => {
     if (!window.speechSynthesis) return;
     window.speechSynthesis.getVoices();
