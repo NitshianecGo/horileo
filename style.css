@@ -411,3 +411,99 @@ body.dark-theme .option-btn.wrong {
         padding: 20px;
     }
 }
+/* ===== Улучшенный дизайн для начального курса ===== */
+.beginner-card .letter-btn {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.beginner-card .letter-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+.beginner-card .option-btn {
+    padding: 12px 24px;
+    font-size: 1.1rem;
+}
+.beginner-card .option-btn.correct {
+    background: #d4edda;
+    border-color: #28a745;
+}
+.beginner-card .option-btn.wrong {
+    background: #f8d7da;
+    border-color: #dc3545;
+}
+/* Мягкие цвета для карточек */
+.card {
+    border-radius: 24px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+    transition: box-shadow 0.3s;
+}
+.card:hover {
+    box-shadow: 0 12px 32px rgba(0,0,0,0.1);
+}
+/* Шрифт и размер */
+body {
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+}
+h2, h3, h4 {
+    font-weight: 600;
+    letter-spacing: -0.02em;
+}
+.reading-text {
+    font-size: 1.4rem;
+    line-height: 1.8;
+}
+.option-btn {
+    font-size: 1.05rem;
+    padding: 12px 20px;
+}
+/* Кнопки */
+.btn-primary {
+    background: #ff8a5c;
+    background: linear-gradient(135deg, #ff8a5c, #ff6b35);
+    border: none;
+    color: white;
+    font-weight: 600;
+    padding: 12px 28px;
+    border-radius: 40px;
+    box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+    transition: all 0.2s;
+}
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 107, 53, 0.4);
+}
+.btn-primary:active {
+    transform: scale(0.96);
+}
+.btn-secondary {
+    background: #f0f0f0;
+    color: #333;
+    border: 1px solid #ddd;
+}
+.btn-secondary:hover {
+    background: #e5e5e5;
+}
+/* Тёмная тема адаптация */
+body.dark-theme .btn-secondary {
+    background: #3a3a3a;
+    color: #ddd;
+    border-color: #555;
+}
+body.dark-theme .btn-secondary:hover {
+    background: #4a4a4a;
+}
+/* Дополнительные отступы */
+.card {
+    padding: 20px 24px;
+}
+@media (max-width: 480px) {
+    .card {
+        padding: 16px;
+    }
+    .reading-text {
+        font-size: 1.2rem;
+    }
+}
