@@ -129,7 +129,7 @@ body.dark-theme .theme-btn:hover {
     font-size: 1.8rem;
     padding: 4px 20px;
     opacity: 0.4;
-    transition: var(--transition);
+    transition: all 0.2s;
     cursor: pointer;
     border-radius: 30px;
     color: var(--text);
