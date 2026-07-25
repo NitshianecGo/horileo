@@ -1,4 +1,4 @@
-// app.js – полная логика приложения (начальный курс, чтение, аудио, грамматика, словарь, профиль, тема)
+// app.js – полная логика с выбором голоса в настройках
 
 let currentLevelId = 'topik1';
 let currentTab = 'home';
@@ -31,7 +31,8 @@ function loadProgress() {
         grammarProgress: {},
         beginnerCompleted: [],
         totalLessons: 0,
-        wordsLearned: 0
+        wordsLearned: 0,
+        voicePreference: 'auto' // 'auto', 'female', 'male'
     };
 }
 
@@ -75,7 +76,7 @@ navBtns.forEach(btn => {
 // ----- Главная -----
 function renderHome() {
     const totalTasks = 100;
-    const completed = 0; // упрощённо
+    const completed = 0;
     const pct = Math.min(100, Math.round((completed / totalTasks) * 100));
     let html = `
         <div class="card" style="text-align:center;">
@@ -120,7 +121,6 @@ function continueLearning() {
 // ----- План (начальный + уровни) -----
 function renderPlan() {
     let html = `<h2>📚 План обучения</h2>`;
-    // Начальный план
     html += `<div class="card"><h3>${BEGINNER_PLAN.title}</h3>`;
     BEGINNER_PLAN.steps.forEach((step, idx) => {
         const done = userProgress.beginnerCompleted && userProgress.beginnerCompleted.includes(step.id);
@@ -133,7 +133,6 @@ function renderPlan() {
     });
     html += `<button class="btn-secondary" onclick="startBeginner()" style="margin-top:12px;">Начать начальный курс</button></div>`;
 
-    // Уровни TOPIK
     LEVELS.forEach(l => {
         html += `
             <div class="card" onclick="selectLevel('${l.id}')" style="cursor:pointer;">
@@ -293,7 +292,7 @@ function beginnerNext() {
     }
 }
 
-// ----- План уровня (список разделов) -----
+// ----- План уровня -----
 function renderLevelPlan(levelId) {
     const level = LEVELS.find(l => l.id === levelId);
     if (!level) return;
@@ -659,8 +658,43 @@ function grammarPrev() {
     }
 }
 
-// ----- ОЗВУЧКА (женский голос) -----
-function playAudio(text) {
+// ----- ОЗВУЧКА С ВОЗМОЖНОСТЬЮ ВЫБОРА ГОЛОСА (новая версия) -----
+let availableVoices = [];
+let voiceLoaded = false;
+
+function loadVoices() {
+    return new Promise((resolve) => {
+        if (voiceLoaded && availableVoices.length > 0) {
+            resolve(availableVoices);
+            return;
+        }
+        const getVoices = () => {
+            const voices = window.speechSynthesis.getVoices();
+            if (voices.length > 0) {
+                availableVoices = voices;
+                voiceLoaded = true;
+                resolve(voices);
+            } else {
+                // Повторная попытка через 100 мс
+                setTimeout(getVoices, 100);
+            }
+        };
+        getVoices();
+        // Таймаут на случай, если голоса не загрузились
+        setTimeout(() => {
+            if (!voiceLoaded) {
+                const voices = window.speechSynthesis.getVoices();
+                if (voices.length > 0) {
+                    availableVoices = voices;
+                    voiceLoaded = true;
+                }
+                resolve(availableVoices);
+            }
+        }, 2000);
+    });
+}
+
+async function playAudio(text) {
     if (!window.speechSynthesis) {
         alert('Ваш браузер не поддерживает синтез речи.');
         return;
@@ -672,24 +706,61 @@ function playAudio(text) {
     utterance.rate = parseFloat(localStorage.getItem('horileo_speed')) || 0.9;
     utterance.pitch = 1.0;
 
-    const voices = window.speechSynthesis.getVoices();
+    // Загружаем голоса, если ещё нет
+    const voices = await loadVoices();
+    const koVoices = voices.filter(v => v.lang.startsWith('ko'));
+
+    if (koVoices.length === 0) {
+        // Если корейских голосов нет, пробуем стандартный
+        window.speechSynthesis.speak(utterance);
+        return;
+    }
+
     let selectedVoice = null;
-    for (const v of voices) {
-        if (v.lang.startsWith('ko')) {
+    const preference = userProgress.voicePreference || 'auto';
+
+    if (preference === 'female') {
+        // Ищем женский: female, girl, siri, yuna, nara, 여성
+        selectedVoice = koVoices.find(v => {
             const name = v.name.toLowerCase();
-            if (name.includes('female') || name.includes('google') || name.includes('여성')) {
-                selectedVoice = v;
-                break;
-            }
+            return name.includes('female') || name.includes('girl') || name.includes('siri') ||
+                   name.includes('yuna') || name.includes('nara') || name.includes('여성');
+        });
+        if (!selectedVoice) {
+            // Если не нашли явный женский, берём первый корейский
+            selectedVoice = koVoices[0];
+        }
+    } else if (preference === 'male') {
+        selectedVoice = koVoices.find(v => {
+            const name = v.name.toLowerCase();
+            return name.includes('male') || name.includes('man') || name.includes('남성');
+        });
+        if (!selectedVoice) {
+            selectedVoice = koVoices[0];
+        }
+    } else { // auto
+        // Сначала ищем женский, потом мужской, потом первый
+        const female = koVoices.find(v => {
+            const name = v.name.toLowerCase();
+            return name.includes('female') || name.includes('girl') || name.includes('siri') ||
+                   name.includes('yuna') || name.includes('nara') || name.includes('여성');
+        });
+        if (female) {
+            selectedVoice = female;
+        } else {
+            const male = koVoices.find(v => {
+                const name = v.name.toLowerCase();
+                return name.includes('male') || name.includes('man') || name.includes('남성');
+            });
+            selectedVoice = male || koVoices[0];
         }
     }
-    if (!selectedVoice) {
-        selectedVoice = voices.find(v => v.lang.startsWith('ko'));
-    }
+
     if (selectedVoice) {
         utterance.voice = selectedVoice;
         console.log('Выбран голос:', selectedVoice.name);
     }
+
     window.speechSynthesis.speak(utterance);
 }
 
@@ -803,7 +874,7 @@ function closeRepetition() {
     if (modal) modal.remove();
 }
 
-// ----- ПРОФИЛЬ -----
+// ----- ПРОФИЛЬ с настройкой голоса -----
 function renderProfile() {
     const totalWords = WORDS.filter(w => w.levelId === currentLevelId).length;
     const learnedWords = Object.keys(userProgress.learnedWords || {}).filter(w => WORDS.find(word => word.word === w && word.levelId === currentLevelId)).length;
@@ -814,6 +885,8 @@ function renderProfile() {
     if (beginnerProgress >= totalBeginner) level = 'TOPIK 1';
     if (learnedWords > 30) level = 'TOPIK 2';
     if (learnedWords > 60) level = 'TOPIK 3';
+
+    const voicePref = userProgress.voicePreference || 'auto';
 
     const html = `
         <div class="card">
@@ -826,7 +899,17 @@ function renderProfile() {
             <hr>
             <h4>Настройки</h4>
             <label>Скорость речи: <input type="range" min="0.5" max="1.5" step="0.1" value="${localStorage.getItem('horileo_speed') || 0.9}" id="speed-range"></label>
+            <br><br>
+            <label>Голос:
+                <select id="voice-preference">
+                    <option value="auto" ${voicePref === 'auto' ? 'selected' : ''}>Авто (рекомендуется)</option>
+                    <option value="female" ${voicePref === 'female' ? 'selected' : ''}>Женский</option>
+                    <option value="male" ${voicePref === 'male' ? 'selected' : ''}>Мужской</option>
+                </select>
+            </label>
             <br>
+            <button class="btn-secondary" onclick="saveVoicePreference()">Сохранить настройки голоса</button>
+            <br><br>
             <button class="btn-secondary" onclick="resetProgress()">Сбросить прогресс</button>
         </div>
     `;
@@ -836,10 +919,20 @@ function renderProfile() {
     });
 }
 
+function saveVoicePreference() {
+    const select = document.getElementById('voice-preference');
+    if (select) {
+        userProgress.voicePreference = select.value;
+        saveProgress();
+        alert('Настройки голоса сохранены!');
+        renderProfile();
+    }
+}
+
 function resetProgress() {
     if (confirm('Вы уверены? Весь прогресс будет удалён.')) {
         localStorage.removeItem('horileo_progress');
-        userProgress = { currentLevel: 'topik1', coins: 0, learnedWords: {}, readingProgress: {}, audioProgress: {}, grammarProgress: {}, beginnerCompleted: [], totalLessons: 0, wordsLearned: 0 };
+        userProgress = { currentLevel: 'topik1', coins: 0, learnedWords: {}, readingProgress: {}, audioProgress: {}, grammarProgress: {}, beginnerCompleted: [], totalLessons: 0, wordsLearned: 0, voicePreference: 'auto' };
         saveProgress();
         navigateTo('home');
     }
@@ -881,10 +974,12 @@ document.addEventListener('DOMContentLoaded', function() {
     loadTheme();
     loadProgress();
     navigateTo('home');
+    // Предварительная загрузка голосов
     if (window.speechSynthesis) {
         window.speechSynthesis.getVoices();
         window.speechSynthesis.onvoiceschanged = () => {
             window.speechSynthesis.getVoices();
+            voiceLoaded = false; // сбросить, чтобы перезагрузить при необходимости
         };
     }
     const themeBtn = document.getElementById('theme-toggle');
