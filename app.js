@@ -1,4 +1,4 @@
-// app.js – полная логика, включая раздел "План" с начальным обучением
+// app.js – полная логика приложения (начальный курс, чтение, аудио, грамматика, словарь, профиль, тема)
 
 let currentLevelId = 'topik1';
 let currentTab = 'home';
@@ -7,7 +7,6 @@ let currentGrammarExerciseIndex = 0;
 let readingItems = [];
 let audioItems = [];
 let grammarItems = [];
-let beginnerSteps = [];
 let userProgress = {};
 
 const mainEl = document.getElementById('app-main');
@@ -25,15 +24,14 @@ function loadProgress() {
     } catch(e) {}
     userProgress = {
         currentLevel: 'topik1',
-        completedTasks: [],
         coins: 0,
-        wordsLearned: 0,
-        totalLessons: 0,
         learnedWords: {},
         readingProgress: {},
         audioProgress: {},
         grammarProgress: {},
-        beginnerStep: 0 // для начального плана
+        beginnerCompleted: [],
+        totalLessons: 0,
+        wordsLearned: 0
     };
 }
 
@@ -50,7 +48,7 @@ function updateCoinDisplay() {
 loadProgress();
 navigateTo('home');
 
-// ----- Навигация по вкладкам -----
+// ----- Навигация -----
 function navigateTo(tab) {
     currentTab = tab;
     navBtns.forEach(btn => btn.classList.remove('active'));
@@ -77,7 +75,7 @@ navBtns.forEach(btn => {
 // ----- Главная -----
 function renderHome() {
     const totalTasks = 100;
-    const completed = userProgress.completedTasks ? userProgress.completedTasks.length : 0;
+    const completed = 0; // упрощённо
     const pct = Math.min(100, Math.round((completed / totalTasks) * 100));
     let html = `
         <div class="card" style="text-align:center;">
@@ -125,7 +123,7 @@ function renderPlan() {
     // Начальный план
     html += `<div class="card"><h3>${BEGINNER_PLAN.title}</h3>`;
     BEGINNER_PLAN.steps.forEach((step, idx) => {
-        const done = userProgress.beginnerStep > idx;
+        const done = userProgress.beginnerCompleted && userProgress.beginnerCompleted.includes(step.id);
         html += `
             <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border);">
                 <span>${idx+1}. ${step.title}</span>
@@ -148,8 +146,14 @@ function renderPlan() {
 }
 
 function startBeginner() {
-    // Переходим к первому шагу
-    userProgress.beginnerStep = 0;
+    let startIdx = 0;
+    for (let i = 0; i < BEGINNER_PLAN.steps.length; i++) {
+        if (!userProgress.beginnerCompleted || !userProgress.beginnerCompleted.includes(BEGINNER_PLAN.steps[i].id)) {
+            startIdx = i;
+            break;
+        }
+    }
+    userProgress.beginnerStep = startIdx;
     saveProgress();
     showBeginnerStep();
 }
@@ -164,26 +168,129 @@ function showBeginnerStep() {
     }
     const step = steps[stepIndex];
     const total = steps.length;
-    const html = `
-        <div class="card">
+    const isCompleted = userProgress.beginnerCompleted && userProgress.beginnerCompleted.includes(step.id);
+
+    let html = `
+        <div class="card beginner-card">
             <h2>📘 Начальный этап</h2>
             <p>Шаг ${stepIndex+1} из ${total}</p>
             <h3>${step.title}</h3>
             <p>${step.description}</p>
-            <div style="margin-top:16px;">
-                <button class="btn-primary" onclick="beginnerComplete()">✅ Пройдено</button>
+            <div style="margin:16px 0;">
+    `;
+
+    if (step.content) {
+        step.content.forEach(block => {
+            if (block.type === 'consonants' || block.type === 'vowels') {
+                const label = block.type === 'consonants' ? 'Согласные' : 'Гласные';
+                html += `<p><strong>${label}:</strong></p><div style="display:flex; flex-wrap:wrap; gap:8px; justify-content:center;">`;
+                block.letters.forEach(letter => {
+                    html += `<button class="letter-btn" onclick="playAudio('${letter}')" style="font-size:2rem; padding:8px 16px; border-radius:12px; border:1px solid var(--border); background:var(--card-bg); cursor:pointer;">${letter}</button>`;
+                });
+                html += `</div><p style="font-size:0.8rem; color:var(--text-secondary);">Нажмите на букву, чтобы услышать произношение.</p>`;
+            } else if (block.type === 'numbers') {
+                html += `<p><strong>Числа:</strong></p><div style="display:flex; flex-wrap:wrap; gap:8px; justify-content:center;">`;
+                block.numbers.forEach(num => {
+                    html += `<button class="letter-btn" onclick="playAudio('${num}')" style="font-size:1.5rem; padding:8px 16px; border-radius:12px; border:1px solid var(--border); background:var(--card-bg); cursor:pointer;">${num}</button>`;
+                });
+                html += `</div><p style="font-size:0.8rem; color:var(--text-secondary);">Нажмите на число, чтобы услышать произношение.</p>`;
+            } else if (block.type === 'phrases') {
+                html += `<p><strong>Фразы:</strong></p><div class="phrases-list">`;
+                block.phrases.forEach(phrase => {
+                    html += `<div class="phrase-item">
+                        <span class="ko">${phrase.korean}</span>
+                        <span class="ru">${phrase.russian}</span>
+                        <button class="btn-secondary" onclick="playAudio('${phrase.korean}')">🔊</button>
+                    </div>`;
+                });
+                html += `</div>`;
+            } else if (block.type === 'explanation') {
+                html += `<div style="background:var(--secondary-bg); padding:16px; border-radius:12px; margin:8px 0;">${block.text}</div>`;
+            }
+        });
+    }
+
+    if (step.exercise) {
+        const ex = step.exercise;
+        html += `<div style="margin-top:20px; border-top:1px solid var(--border); padding-top:16px;">`;
+        html += `<h4>Упражнение:</h4><p>${ex.question}</p>`;
+        if (ex.type === 'choose') {
+            html += `<div class="option-grid">`;
+            ex.options.forEach((opt, idx) => {
+                html += `<button class="option-btn" onclick="checkBeginnerExercise(${idx}, '${step.id}')">${opt}</button>`;
+            });
+            html += `</div>`;
+            html += `<div id="beginner-feedback-${step.id}"></div>`;
+        } else if (ex.type === 'build_syllable') {
+            html += `<input type="text" id="beginner-input-${step.id}" placeholder="Введите слог" style="width:100%; padding:10px; border-radius:16px; border:1px solid var(--border); background:var(--input-bg); color:var(--text); margin:8px 0;">`;
+            html += `<button class="btn-primary" onclick="checkBeginnerBuild('${step.id}', '${ex.correct}')">Проверить</button>`;
+            html += `<div id="beginner-feedback-${step.id}"></div>`;
+        }
+        html += `</div>`;
+    }
+
+    html += `
+            </div>
+            <div style="display:flex; gap:12px; flex-wrap:wrap; justify-content:center;">
+                <button class="btn-primary" onclick="beginnerNext()" ${isCompleted ? '' : 'disabled'}>➡️ Дальше</button>
                 <button class="btn-secondary" onclick="navigateTo('plan')">Назад к плану</button>
             </div>
+            ${isCompleted ? '<p style="color:green;">✅ Шаг пройден!</p>' : '<p style="color:orange;">Выполните упражнение, чтобы перейти дальше.</p>'}
         </div>
     `;
     mainEl.innerHTML = html;
 }
 
-function beginnerComplete() {
-    userProgress.beginnerStep = (userProgress.beginnerStep || 0) + 1;
-    userProgress.coins = (userProgress.coins || 0) + 3;
-    saveProgress();
-    showBeginnerStep();
+function checkBeginnerExercise(selected, stepId) {
+    const step = BEGINNER_PLAN.steps.find(s => s.id === stepId);
+    if (!step || !step.exercise) return;
+    const correct = step.exercise.correct;
+    const fb = document.getElementById(`beginner-feedback-${stepId}`);
+    if (selected === correct) {
+        fb.innerHTML = '<span style="color:green;">✅ Правильно! +1 ☕</span>';
+        if (!userProgress.beginnerCompleted) userProgress.beginnerCompleted = [];
+        if (!userProgress.beginnerCompleted.includes(stepId)) {
+            userProgress.beginnerCompleted.push(stepId);
+            userProgress.coins = (userProgress.coins || 0) + 1;
+            saveProgress();
+            const nextBtn = document.querySelector('.beginner-card .btn-primary');
+            if (nextBtn) nextBtn.disabled = false;
+        }
+    } else {
+        fb.innerHTML = '<span style="color:red;">❌ Неверно, попробуйте снова.</span>';
+    }
+}
+
+function checkBeginnerBuild(stepId, correct) {
+    const input = document.getElementById(`beginner-input-${stepId}`);
+    if (!input) return;
+    const answer = input.value.trim();
+    const fb = document.getElementById(`beginner-feedback-${stepId}`);
+    if (answer === correct) {
+        fb.innerHTML = '<span style="color:green;">✅ Правильно! +1 ☕</span>';
+        if (!userProgress.beginnerCompleted) userProgress.beginnerCompleted = [];
+        if (!userProgress.beginnerCompleted.includes(stepId)) {
+            userProgress.beginnerCompleted.push(stepId);
+            userProgress.coins = (userProgress.coins || 0) + 1;
+            saveProgress();
+            const nextBtn = document.querySelector('.beginner-card .btn-primary');
+            if (nextBtn) nextBtn.disabled = false;
+        }
+    } else {
+        fb.innerHTML = `<span style="color:red;">❌ Неверно. Правильный ответ: ${correct}</span>`;
+    }
+}
+
+function beginnerNext() {
+    const currentIdx = userProgress.beginnerStep || 0;
+    if (currentIdx < BEGINNER_PLAN.steps.length - 1) {
+        userProgress.beginnerStep = currentIdx + 1;
+        saveProgress();
+        showBeginnerStep();
+    } else {
+        alert('🎉 Вы завершили все шаги начального курса!');
+        renderPlan();
+    }
 }
 
 // ----- План уровня (список разделов) -----
@@ -205,12 +312,12 @@ function renderLevelPlan(levelId) {
     mainEl.innerHTML = html;
 }
 
-// ----- Чтение -----
+// ----- ЧТЕНИЕ -----
 function openReadingSection() {
     const level = LEVELS.find(l => l.id === currentLevelId);
     if (!level) return;
     readingItems = level.reading;
-    const progress = userProgress.readingProgress?.[currentLevelId] || { index: 0, completed: [] };
+    const progress = userProgress.readingProgress?.[currentLevelId] || { index: 0, completed: [], skipped: [] };
     currentIndex = progress.index || 0;
     if (currentIndex >= readingItems.length) currentIndex = readingItems.length - 1;
     navigateTo('reading');
@@ -313,12 +420,12 @@ function readingPrev() {
     }
 }
 
-// ----- Аудирование (аналогично чтению) -----
+// ----- АУДИРОВАНИЕ -----
 function openAudioSection() {
     const level = LEVELS.find(l => l.id === currentLevelId);
     if (!level) return;
     audioItems = level.audio;
-    const progress = userProgress.audioProgress?.[currentLevelId] || { index: 0, completed: [] };
+    const progress = userProgress.audioProgress?.[currentLevelId] || { index: 0, completed: [], skipped: [] };
     currentIndex = progress.index || 0;
     if (currentIndex >= audioItems.length) currentIndex = audioItems.length - 1;
     navigateTo('audio');
@@ -421,14 +528,13 @@ function audioPrev() {
     }
 }
 
-// ----- Грамматика -----
+// ----- ГРАММАТИКА -----
 function openGrammarSection() {
     const level = LEVELS.find(l => l.id === currentLevelId);
     if (!level) return;
     grammarItems = level.grammar;
-    const progress = userProgress.grammarProgress?.[currentLevelId] || { ruleIndex: 0, exerciseIndex: 0, completed: [] };
+    const progress = userProgress.grammarProgress?.[currentLevelId] || { ruleIndex: 0, exerciseIndex: 0, completed: [], skipped: [] };
     currentIndex = progress.ruleIndex || 0;
-    currentGrammarExerciseIndex = progress.exerciseIndex || 0;
     if (currentIndex >= grammarItems.length) currentIndex = grammarItems.length - 1;
     navigateTo('grammar');
 }
@@ -460,7 +566,7 @@ function renderGrammar() {
                 <div style="margin-top:16px;">
                     <h4>Упражнение:</h4>
                     <p>${rule.exercises[0].question}</p>
-                    <input type="text" id="grammar-answer" placeholder="Введите ответ" style="width:100%; padding:10px; border-radius:16px; border:1px solid var(--border); margin:8px 0; background:var(--input-bg); color:var(--text);">
+                    <input type="text" id="grammar-answer" placeholder="Введите ответ" style="width:100%; padding:10px; border-radius:16px; border:1px solid var(--border); background:var(--input-bg); color:var(--text); margin:8px 0;">
                     <button class="btn-primary" onclick="checkGrammarAnswer('${rule.exercises[0].correct}')">Проверить</button>
                     <div id="grammar-feedback" style="margin:8px 0;"></div>
                 </div>
@@ -534,7 +640,6 @@ function grammarNext() {
         currentIndex++;
         const progress = userProgress.grammarProgress?.[currentLevelId] || { ruleIndex: 0, exerciseIndex: 0, completed: [], skipped: [] };
         progress.ruleIndex = currentIndex;
-        progress.exerciseIndex = 0;
         if (!userProgress.grammarProgress) userProgress.grammarProgress = {};
         userProgress.grammarProgress[currentLevelId] = progress;
         saveProgress();
@@ -547,7 +652,6 @@ function grammarPrev() {
         currentIndex--;
         const progress = userProgress.grammarProgress?.[currentLevelId] || { ruleIndex: 0, exerciseIndex: 0, completed: [], skipped: [] };
         progress.ruleIndex = currentIndex;
-        progress.exerciseIndex = 0;
         if (!userProgress.grammarProgress) userProgress.grammarProgress = {};
         userProgress.grammarProgress[currentLevelId] = progress;
         saveProgress();
@@ -555,7 +659,7 @@ function grammarPrev() {
     }
 }
 
-// ----- Озвучка с выбором женского голоса -----
+// ----- ОЗВУЧКА (женский голос) -----
 function playAudio(text) {
     if (!window.speechSynthesis) {
         alert('Ваш браузер не поддерживает синтез речи.');
@@ -589,7 +693,7 @@ function playAudio(text) {
     window.speechSynthesis.speak(utterance);
 }
 
-// ----- Словарь -----
+// ----- СЛОВАРЬ -----
 function renderDictionary() {
     const levelWords = WORDS.filter(w => w.levelId === currentLevelId);
     let html = `<h2>📖 Словарь (${currentLevelId})</h2>`;
@@ -611,7 +715,7 @@ function renderDictionary() {
     mainEl.innerHTML = html;
 }
 
-// ----- Карточки повторения -----
+// ----- КАРТОЧКИ ПОВТОРЕНИЯ -----
 let repetitionQueue = [];
 let currentRepIndex = 0;
 let repetitionMode = 'ko->ru';
@@ -664,7 +768,7 @@ function checkRepetition(expected) {
     const userAnswer = input.value.trim();
     const feedback = document.getElementById('rep-feedback');
     if (userAnswer.toLowerCase() === expected.toLowerCase()) {
-        feedback.innerHTML = `<span style="color:green;">✅ Правильно!</span>`;
+        feedback.innerHTML = '<span style="color:green;">✅ Правильно!</span>';
         const word = repetitionQueue[currentRepIndex];
         if (!userProgress.learnedWords) userProgress.learnedWords = {};
         userProgress.learnedWords[word.word] = true;
@@ -699,20 +803,23 @@ function closeRepetition() {
     if (modal) modal.remove();
 }
 
-// ----- Профиль -----
+// ----- ПРОФИЛЬ -----
 function renderProfile() {
     const totalWords = WORDS.filter(w => w.levelId === currentLevelId).length;
     const learnedWords = Object.keys(userProgress.learnedWords || {}).filter(w => WORDS.find(word => word.word === w && word.levelId === currentLevelId)).length;
-    const completedLessons = userProgress.totalLessons || 0;
     const coins = userProgress.coins || 0;
-    let level = 'TOPIK 1';
-    if (completedLessons > 10) level = 'TOPIK 2';
-    if (completedLessons > 30) level = 'TOPIK 3';
+    const beginnerProgress = userProgress.beginnerCompleted ? userProgress.beginnerCompleted.length : 0;
+    const totalBeginner = BEGINNER_PLAN.steps.length;
+    let level = 'Начальный';
+    if (beginnerProgress >= totalBeginner) level = 'TOPIK 1';
+    if (learnedWords > 30) level = 'TOPIK 2';
+    if (learnedWords > 60) level = 'TOPIK 3';
+
     const html = `
         <div class="card">
             <h2>👤 Мой прогресс</h2>
-            <p>🐯 Выучено слов (${currentLevelId}): ${learnedWords}/${totalWords}</p>
-            <p>📚 Пройдено уроков: ${completedLessons}</p>
+            <p>🐯 Начальный курс: ${beginnerProgress}/${totalBeginner} шагов</p>
+            <p>📖 Выучено слов (${currentLevelId}): ${learnedWords}/${totalWords}</p>
             <p>☕ Чашек (очков): ${coins}</p>
             <p>🏆 Уровень: ${level}</p>
             <div class="progress-bar"><div class="progress-fill" style="width:${Math.min(100, (learnedWords/totalWords)*100)}%"></div></div>
@@ -732,7 +839,7 @@ function renderProfile() {
 function resetProgress() {
     if (confirm('Вы уверены? Весь прогресс будет удалён.')) {
         localStorage.removeItem('horileo_progress');
-        userProgress = { currentLevel: 'topik1', completedTasks: [], coins: 0, wordsLearned: 0, totalLessons: 0, learnedWords: {}, readingProgress: {}, audioProgress: {}, grammarProgress: {}, beginnerStep: 0 };
+        userProgress = { currentLevel: 'topik1', coins: 0, learnedWords: {}, readingProgress: {}, audioProgress: {}, grammarProgress: {}, beginnerCompleted: [], totalLessons: 0, wordsLearned: 0 };
         saveProgress();
         navigateTo('home');
     }
@@ -747,7 +854,7 @@ function shuffle(arr) {
     return arr;
 }
 
-// ----- Управление темой -----
+// ----- ТЕМА -----
 function toggleTheme() {
     const body = document.body;
     body.classList.toggle('dark-theme');
@@ -769,7 +876,7 @@ function loadTheme() {
     }
 }
 
-// ----- Инициализация -----
+// ----- ИНИЦИАЛИЗАЦИЯ -----
 document.addEventListener('DOMContentLoaded', function() {
     loadTheme();
     loadProgress();
@@ -784,7 +891,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (themeBtn) themeBtn.addEventListener('click', toggleTheme);
 });
 
-// Активация Speech для iOS (по касанию)
+// Активация Speech для iOS
 document.addEventListener('touchstart', () => {
     if (window.speechSynthesis) window.speechSynthesis.getVoices();
 }, { once: true });
